@@ -1,0 +1,1 @@
+export { LocalAgentRegistry } from "./local";
