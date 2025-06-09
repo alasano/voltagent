@@ -228,7 +228,7 @@ export const ObjectRequestSchema = z
         description: "An array of message objects for object generation",
       }),
     ]),
-    schema: z.any().openapi({
+    schema: z.record(z.any()).openapi({
       description: "JSON Schema or Zod schema defining the expected object structure",
       example: {
         type: "object",
