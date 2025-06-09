@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { AgentHistoryEntry } from "../agent/history";
 import type { AgentStatus } from "../agent/types";
 import type { BaseMessage } from "../index";
-import { AgentRegistry } from "../server/registry";
+import type { LocalAgentRegistry } from "../registry";
 import devLogger from "../utils/internal/dev-logger";
 import type { NewTimelineEvent } from "./types";
 
@@ -92,6 +92,7 @@ export class AgentEventEmitter extends EventEmitter {
    * @param historyId - History entry ID
    * @param event - The NewTimelineEvent object to publish. Must conform to the new BaseTimelineEvent structure.
    * @param skipPropagation - Optional flag to skip propagating this event to parent agents (to prevent cycles)
+   * @param registry - Optional registry for server-independent usage
    * @returns The updated AgentHistoryEntry or undefined if an error occurs.
    */
   public async publishTimelineEvent(params: {
@@ -99,8 +100,9 @@ export class AgentEventEmitter extends EventEmitter {
     historyId: string;
     event: NewTimelineEvent; // This now uses NewTimelineEvent type
     skipPropagation?: boolean;
+    registry?: LocalAgentRegistry;
   }): Promise<AgentHistoryEntry | undefined> {
-    const { agentId, historyId, event, skipPropagation = false } = params;
+    const { agentId, historyId, event, skipPropagation = false, registry } = params;
 
     // Ensure event has an id and startTime
     if (!event.id) {
@@ -112,7 +114,8 @@ export class AgentEventEmitter extends EventEmitter {
       event.startTime = new Date().toISOString();
     }
 
-    const agent = AgentRegistry.getInstance().getAgent(agentId);
+    // Use provided registry or fallback to singleton for backward compatibility
+    const agent = registry?.getAgent(agentId);
     if (!agent) {
       devLogger.warn("Agent not found: ", agentId);
       return undefined;
@@ -129,7 +132,7 @@ export class AgentEventEmitter extends EventEmitter {
 
         // Propagate the event to parent agents if not explicitly skipped
         if (!skipPropagation) {
-          await this.propagateEventToParentAgents(agentId, historyId, event);
+          await this.propagateEventToParentAgents(agentId, historyId, event, registry);
         }
 
         return updatedEntry;
@@ -155,6 +158,7 @@ export class AgentEventEmitter extends EventEmitter {
     agentId: string,
     _historyId: string,
     event: NewTimelineEvent,
+    registry?: LocalAgentRegistry,
     visited: Set<string> = new Set(),
   ): Promise<void> {
     // Prevent infinite loops in cyclic agent relationships by tracking visited agents
@@ -162,12 +166,12 @@ export class AgentEventEmitter extends EventEmitter {
     visited.add(agentId);
 
     // Get parent agent IDs for this agent
-    const parentIds = AgentRegistry.getInstance().getParentAgentIds(agentId);
+    const parentIds = registry?.getParentAgentIds(agentId) ?? [];
     if (parentIds.length === 0) return; // No parents, nothing to propagate to
 
     // Propagate to each parent agent
     for (const parentId of parentIds) {
-      const parentAgent = AgentRegistry.getInstance().getAgent(parentId);
+      const parentAgent = registry?.getAgent(parentId);
       if (!parentAgent) continue;
 
       // Find active history entry for the parent agent
@@ -194,7 +198,13 @@ export class AgentEventEmitter extends EventEmitter {
       });
 
       // Recursively propagate to higher level ancestors (grandparents)
-      await this.propagateEventToParentAgents(parentId, activeParentEntry.id, event, visited);
+      await this.propagateEventToParentAgents(
+        parentId,
+        activeParentEntry.id,
+        event,
+        registry,
+        visited,
+      );
     }
   }
 
@@ -220,6 +230,7 @@ export class AgentEventEmitter extends EventEmitter {
   public async emitHierarchicalHistoryEntryCreated(
     agentId: string,
     historyEntry: AgentHistoryEntry,
+    registry?: LocalAgentRegistry,
     visited: Set<string> = new Set(),
   ): Promise<void> {
     // Prevent infinite loops by tracking visited agents
@@ -227,15 +238,15 @@ export class AgentEventEmitter extends EventEmitter {
     visited.add(agentId);
 
     // Get parent agent IDs for this agent
-    const parentIds = AgentRegistry.getInstance().getParentAgentIds(agentId);
+    const parentIds = registry?.getParentAgentIds(agentId) ?? [];
 
     // Get agent information for better naming
-    const agent = AgentRegistry.getInstance().getAgent(agentId);
+    const agent = registry?.getAgent(agentId);
     const agentName = agent ? agent.name : agentId;
 
     // Propagate history creation to each parent agent
     for (const parentId of parentIds) {
-      const parentAgent = AgentRegistry.getInstance().getAgent(parentId);
+      const parentAgent = registry?.getAgent(parentId);
       if (!parentAgent) continue;
 
       // Find active history entry for the parent
@@ -265,11 +276,12 @@ export class AgentEventEmitter extends EventEmitter {
             },
             traceId: activeParentHistoryEntry.id,
           },
+          registry,
         });
       }
 
       // Recursively propagate to higher-level ancestors
-      await this.emitHierarchicalHistoryEntryCreated(parentId, historyEntry, visited);
+      await this.emitHierarchicalHistoryEntryCreated(parentId, historyEntry, registry, visited);
     }
   }
 
@@ -280,6 +292,7 @@ export class AgentEventEmitter extends EventEmitter {
   public async emitHierarchicalHistoryUpdate(
     agentId: string,
     historyEntry: AgentHistoryEntry,
+    registry?: LocalAgentRegistry,
     visited: Set<string> = new Set(),
   ): Promise<void> {
     // Prevent infinite loops by tracking visited agents
@@ -287,15 +300,15 @@ export class AgentEventEmitter extends EventEmitter {
     visited.add(agentId);
 
     // Get parent agent IDs for this agent
-    const parentIds = AgentRegistry.getInstance().getParentAgentIds(agentId);
+    const parentIds = registry?.getParentAgentIds(agentId) ?? [];
 
     // Get agent information for better naming
-    const agent = AgentRegistry.getInstance().getAgent(agentId);
+    const agent = registry?.getAgent(agentId);
     const agentName = agent ? agent.name : agentId;
 
     // Propagate history update to each parent agent
     for (const parentId of parentIds) {
-      const parentAgent = AgentRegistry.getInstance().getAgent(parentId);
+      const parentAgent = registry?.getAgent(parentId);
       if (!parentAgent) continue;
 
       // Find active history entry for the parent
@@ -329,6 +342,7 @@ export class AgentEventEmitter extends EventEmitter {
               },
               traceId: activeParentHistoryEntry.id,
             },
+            registry,
           });
         } else if (historyEntry.status === "error") {
           // Create agent:error event
@@ -356,12 +370,13 @@ export class AgentEventEmitter extends EventEmitter {
               },
               traceId: activeParentHistoryEntry.id,
             },
+            registry,
           });
         }
         // Other statuses can be handled here if needed (e.g., "working", "cancelled", etc.)
 
         // Recursively propagate to higher-level ancestors
-        await this.emitHierarchicalHistoryUpdate(parentId, historyEntry, visited);
+        await this.emitHierarchicalHistoryUpdate(parentId, historyEntry, registry, visited);
       }
     }
   }

@@ -53,7 +53,7 @@ describe("SubAgentManager", () => {
   beforeEach(() => {
     mockAgent1 = new MockAgent("agent1", "Math Agent");
     mockAgent2 = new MockAgent("agent2", "Writing Agent");
-    subAgentManager = new SubAgentManager("Main Agent");
+    subAgentManager = new SubAgentManager("main-agent-id", "Main Agent");
   });
 
   describe("constructor", () => {
@@ -62,7 +62,7 @@ describe("SubAgentManager", () => {
     });
 
     it("should initialize with provided sub-agents", () => {
-      const manager = new SubAgentManager("Main Agent", [mockAgent1, mockAgent2]);
+      const manager = new SubAgentManager("main-agent-id", "Main Agent", [mockAgent1, mockAgent2]);
       expect(manager.getSubAgents().length).toBe(2);
     });
   });
@@ -112,7 +112,7 @@ describe("SubAgentManager", () => {
 
   describe("generateSupervisorSystemMessage", () => {
     it("should return the original description if no sub-agents", () => {
-      const subAgentManager = new SubAgentManager("TestAgent");
+      const subAgentManager = new SubAgentManager("test-agent-id", "TestAgent");
       const description = "Original description";
 
       // Call with empty agentsMemory string (default parameter)
@@ -131,7 +131,10 @@ describe("SubAgentManager", () => {
         instructions: "Second agent",
       } as Agent<any>;
 
-      const subAgentManager = new SubAgentManager("TestAgent", [subAgentAgent1, subAgentAgent2]);
+      const subAgentManager = new SubAgentManager("test-agent-id", "TestAgent", [
+        subAgentAgent1,
+        subAgentAgent2,
+      ]);
       const description = "Original description";
 
       // Call with empty agentsMemory string (default parameter)
@@ -156,7 +159,10 @@ describe("SubAgentManager", () => {
         instructions: "No purpose provided",
       } as Agent<any>;
 
-      const subAgentManager = new SubAgentManager("TestAgent", [subAgentAgent1, subAgentAgent2]);
+      const subAgentManager = new SubAgentManager("test-agent-id", "TestAgent", [
+        subAgentAgent1,
+        subAgentAgent2,
+      ]);
       const description = "Original description";
 
       // Call with empty agentsMemory string (default parameter)

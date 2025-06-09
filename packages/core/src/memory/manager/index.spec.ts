@@ -7,27 +7,7 @@ import type { NewTimelineEvent } from "../../events/types";
 import type { Memory, MemoryMessage } from "../types";
 
 // Mock the AgentRegistry
-jest.mock("../../server/registry", () => {
-  const mockAgent = {
-    id: "test-agent",
-    name: "Test Agent",
-    getHistory: jest.fn().mockReturnValue([
-      {
-        id: "history-1",
-        status: "idle",
-        events: [],
-      },
-    ]),
-  };
-
-  return {
-    AgentRegistry: {
-      getInstance: jest.fn().mockReturnValue({
-        getAgent: jest.fn().mockReturnValue(mockAgent),
-      }),
-    },
-  };
-});
+// The MemoryManager is now decoupled from the registry, so this mock is no longer needed.
 
 // Mock the AgentEventEmitter
 jest.mock("../../events", () => {

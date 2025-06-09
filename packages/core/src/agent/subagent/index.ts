@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AgentRegistry } from "../../server/registry";
+import type { LocalAgentRegistry } from "../../registry";
 import { createTool } from "../../tool";
 import devLogger from "../../utils/internal/dev-logger";
 import type { Agent } from "../index";
@@ -11,9 +11,14 @@ import type { AgentHandoffOptions, AgentHandoffResult } from "../types";
  */
 export class SubAgentManager {
   /**
-   * The name of the agent that owns this sub-agent manager
+   * The ID of the agent that owns this sub-agent manager
    */
-  private agentName: string;
+  private parentAgentId: string;
+
+  /**
+   * The name of the parent agent (for logging/handoff messages)
+   */
+  private parentAgentName: string;
 
   /**
    * Sub-agents that the parent agent can delegate tasks to
@@ -21,13 +26,27 @@ export class SubAgentManager {
   private subAgents: Agent<any>[] = [];
 
   /**
+   * Optional registry for server-independent usage
+   */
+  private registry?: LocalAgentRegistry;
+
+  /**
    * Creates a new SubAgentManager instance
    *
-   * @param agentName - The name of the agent that owns this sub-agent manager
+   * @param parentAgentId - The ID of the agent that owns this sub-agent manager
+   * @param parentAgentName - The name of the parent agent (for logging/handoff messages)
    * @param subAgents - Initial sub-agents to add
+   * @param registry - Optional LocalAgentRegistry for server-independent usage
    */
-  constructor(agentName: string, subAgents: Agent<any>[] = []) {
-    this.agentName = agentName;
+  constructor(
+    parentAgentId: string,
+    parentAgentName: string,
+    subAgents: Agent<any>[] = [],
+    registry?: LocalAgentRegistry,
+  ) {
+    this.parentAgentId = parentAgentId;
+    this.parentAgentName = parentAgentName;
+    this.registry = registry;
 
     // Initialize with empty array
     this.subAgents = [];
@@ -42,16 +61,20 @@ export class SubAgentManager {
   public addSubAgent(agent: Agent<any>): void {
     this.subAgents.push(agent);
 
-    // Register parent-child relationship in the registry
-    AgentRegistry.getInstance().registerSubAgent(this.agentName, agent.id);
+    // Register parent-child relationship in the registry (if available)
+    if (this.registry && typeof this.registry.registerSubAgent === "function") {
+      this.registry.registerSubAgent(this.parentAgentId, agent.id);
+    }
   }
 
   /**
    * Remove a sub-agent
    */
   public removeSubAgent(agentId: string): void {
-    // Unregister parent-child relationship
-    AgentRegistry.getInstance().unregisterSubAgent(this.agentName, agentId);
+    // Unregister parent-child relationship (if registry available)
+    if (this.registry && typeof this.registry.unregisterSubAgent === "function") {
+      this.registry.unregisterSubAgent(this.parentAgentId, agentId);
+    }
 
     // Remove from local array
     this.subAgents = this.subAgents.filter((agent) => agent.id !== agentId);
@@ -63,8 +86,12 @@ export class SubAgentManager {
   public unregisterAllSubAgents(): void {
     // Unregister all parent-child relationships
     for (const agent of this.subAgents) {
-      AgentRegistry.getInstance().unregisterSubAgent(this.agentName, agent.id);
+      if (this.registry && typeof this.registry.unregisterSubAgent === "function") {
+        this.registry.unregisterSubAgent(this.parentAgentId, agent.id);
+      }
     }
+    // Clear the local array
+    this.subAgents = [];
   }
 
   /**
@@ -172,7 +199,7 @@ ${agentsMemory || "No previous agent interactions available."}
       // Prepare the handoff message with task context
       const handoffMessage: BaseMessage = {
         role: "system",
-        content: `Task handed off from ${sourceAgent?.name || this.agentName} to ${targetAgent.name}:
+        content: `Task handed off from ${sourceAgent?.name || this.parentAgentName} to ${targetAgent.name}:
 ${task}
 Context: ${JSON.stringify(context)}`,
       };
