@@ -15,15 +15,18 @@ class TestServerAdapter extends ServerAdapter {
       method: route.method,
       handler: route.handler,
     });
+    // Update base class registeredRoutes as well
+    this.registeredRoutes.push(route);
   }
 
   // Test helper methods
-  getRegisteredRoutes() {
-    return this.routes;
-  }
-
   findRoute(path: string, method: HttpMethod) {
     return this.routes.find((route) => route.path === path && route.method === method);
+  }
+
+  // Access protected property for testing
+  getProtectedRegisteredRoutes() {
+    return this.registeredRoutes;
   }
 }
 
@@ -185,6 +188,118 @@ describe("ServerAdapter", () => {
     it("should have optional addWebSocketHandler method", () => {
       // addWebSocketHandler is optional and not implemented in TestServerAdapter
       expect(adapter.addWebSocketHandler).toBeUndefined();
+    });
+  });
+
+  // Additional coverage for base adapter methods
+  describe("ServerAdapter - Additional Coverage", () => {
+    describe("getRegisteredRoutes", () => {
+      it("should return routes array", () => {
+        const routes = adapter.getRegisteredRoutes();
+        expect(Array.isArray(routes)).toBe(true);
+      });
+
+      it("should return routes added via addRoute", () => {
+        const handler: RouteHandler = jest.fn();
+        adapter.addRoute({ path: "/test", method: "get", handler });
+
+        const routes = adapter.getRegisteredRoutes();
+        expect(routes).toContainEqual(
+          expect.objectContaining({
+            path: "/test",
+            method: "get",
+            handler,
+          }),
+        );
+      });
+
+      it("should accumulate multiple routes", () => {
+        const handler1: RouteHandler = jest.fn();
+        const handler2: RouteHandler = jest.fn();
+
+        adapter.addRoute({ path: "/test1", method: "get", handler: handler1 });
+        adapter.addRoute({ path: "/test2", method: "post", handler: handler2 });
+
+        const routes = adapter.getRegisteredRoutes();
+        expect(routes).toHaveLength(2);
+      });
+    });
+
+    describe("addSimpleRoute", () => {
+      it("should delegate to addRoute with correct format", () => {
+        const handler = jest.fn();
+        const spy = jest.spyOn(adapter, "addRoute");
+
+        adapter.addSimpleRoute("/simple", "get", handler);
+
+        expect(spy).toHaveBeenCalledWith({
+          path: "/simple",
+          method: "get",
+          handler,
+        });
+      });
+
+      it("should work with all HTTP methods", () => {
+        const methods: HttpMethod[] = ["get", "post", "put", "patch", "delete", "options", "head"];
+        const spy = jest.spyOn(adapter, "addRoute");
+
+        methods.forEach((method) => {
+          const handler = jest.fn();
+          adapter.addSimpleRoute(`/test-${method}`, method, handler);
+
+          expect(spy).toHaveBeenCalledWith({
+            path: `/test-${method}`,
+            method,
+            handler,
+          });
+        });
+      });
+    });
+
+    describe("addSimpleStreamingRoute", () => {
+      it("should delegate to addStreamingRoute when available", () => {
+        // Create a test adapter that implements streaming
+        class StreamingTestAdapter extends TestServerAdapter {
+          addStreamingRoute = jest.fn();
+        }
+
+        const streamingAdapter = new StreamingTestAdapter();
+        const handler = jest.fn();
+
+        streamingAdapter.addSimpleStreamingRoute?.("/stream", "post", handler);
+
+        expect(streamingAdapter.addStreamingRoute).toHaveBeenCalledWith({
+          path: "/stream",
+          method: "post",
+          handler,
+        });
+      });
+
+      it("should not throw when addStreamingRoute is not implemented", () => {
+        const handler = jest.fn();
+
+        expect(() => {
+          adapter.addSimpleStreamingRoute?.("/stream", "post", handler);
+        }).not.toThrow();
+      });
+    });
+
+    describe("base implementation methods", () => {
+      it("should provide getRegisteredRoutes implementation", () => {
+        // Base adapter should have getRegisteredRoutes method
+        const routes = adapter.getRegisteredRoutes();
+        expect(routes).toBeDefined();
+        expect(Array.isArray(routes)).toBe(true);
+      });
+
+      it("should maintain registeredRoutes state", () => {
+        const initialLength = adapter.getRegisteredRoutes().length;
+        const handler = jest.fn();
+
+        adapter.addRoute({ path: "/state-test", method: "get", handler });
+
+        expect(adapter.getRegisteredRoutes()).toHaveLength(initialLength + 1);
+      });
     });
   });
 

@@ -368,6 +368,235 @@ describe("ConsoleDataFormatter", () => {
     });
   });
 
+  // Additional coverage for console formatter methods
+  describe("ConsoleDataFormatter - Additional Coverage", () => {
+    describe("formatAgentSummary", () => {
+      it("should format single agent summary", () => {
+        const agent = createMockAgent({
+          getFullState: jest.fn().mockReturnValue({
+            id: "agent-1",
+            name: "Test Agent",
+            description: "Test desc",
+            status: "idle",
+            model: "gpt-4",
+            tools: [],
+            subAgents: [],
+            memory: null,
+          }),
+          getToolsForApi: jest.fn().mockReturnValue([]),
+        });
+
+        const result = formatter.formatAgentSummary(agent);
+
+        expect(result).toMatchObject({
+          id: "agent-1",
+          name: "Test Agent",
+          description: "Test desc",
+          status: "idle",
+          model: "gpt-4",
+          tools: [],
+          subAgents: [],
+          memory: null,
+          isTelemetryEnabled: false,
+        });
+      });
+
+      it("should include telemetry status in summary", () => {
+        const agent = createMockAgent({
+          isTelemetryConfigured: jest.fn().mockReturnValue(true),
+        });
+
+        const result = formatter.formatAgentSummary(agent);
+        expect(result.isTelemetryEnabled).toBe(true);
+      });
+    });
+
+    describe("formatHistoryEntry", () => {
+      it("should format single history entry", () => {
+        const entry = createMockHistoryEntry({
+          id: "entry-1",
+          input: "Test input",
+          output: "Test output",
+          status: "completed",
+          startTime: new Date("2024-01-01T00:00:00Z"),
+          endTime: new Date("2024-01-01T00:01:00Z"),
+        });
+
+        const result = formatter.formatHistoryEntry(entry);
+
+        expect(result).toMatchObject({
+          id: "entry-1",
+          input: "Test input",
+          output: "Test output",
+          status: "completed",
+          startTime: new Date("2024-01-01T00:00:00Z"),
+          endTime: new Date("2024-01-01T00:01:00Z"),
+          steps: [],
+          usage: {
+            promptTokens: 10,
+            completionTokens: 20,
+            totalTokens: 30,
+          },
+        });
+      });
+
+      it("should handle history entry without usage", () => {
+        const entry = createMockHistoryEntry({
+          usage: undefined,
+        });
+
+        const result = formatter.formatHistoryEntry(entry);
+        expect(result.usage).toBeUndefined();
+      });
+    });
+
+    describe("formatSuccess with various data types", () => {
+      it("should format text generation result", () => {
+        const result = {
+          text: "Generated text",
+          usage: { promptTokens: 10, completionTokens: 20, totalTokens: 30 },
+          finishReason: "stop",
+        };
+
+        const formatted = formatter.formatSuccess(result);
+
+        expect(formatted).toEqual({
+          success: true,
+          data: result,
+        });
+      });
+
+      it("should format object generation result", () => {
+        const result = {
+          object: { key: "value" },
+          usage: { promptTokens: 15, completionTokens: 25, totalTokens: 40 },
+        };
+
+        const formatted = formatter.formatSuccess(result);
+
+        expect(formatted).toEqual({
+          success: true,
+          data: result,
+        });
+      });
+    });
+
+    describe("formatSuccess with stream data", () => {
+      it("should format stream result", () => {
+        const streamData = { type: "stream", content: "streaming" };
+
+        const formatted = formatter.formatSuccess(streamData);
+
+        expect(formatted).toEqual({
+          success: true,
+          data: streamData,
+        });
+      });
+    });
+
+    describe("formatSuccess with tool execution data", () => {
+      it("should format tool execution result", () => {
+        const toolResult = {
+          toolName: "calculator",
+          input: { expression: "2 + 2" },
+          output: { result: 4 },
+          executionTime: 100,
+        };
+
+        const formatted = formatter.formatSuccess(toolResult);
+
+        expect(formatted).toEqual({
+          success: true,
+          data: toolResult,
+        });
+      });
+    });
+
+    describe("formatSuccess", () => {
+      it("should wrap data in success response", () => {
+        const data = { foo: "bar", count: 42 };
+        const result = formatter.formatSuccess(data);
+
+        expect(result).toEqual({
+          success: true,
+          data: { foo: "bar", count: 42 },
+        });
+      });
+
+      it("should handle null data", () => {
+        const result = formatter.formatSuccess(null);
+
+        expect(result).toEqual({
+          success: true,
+          data: null,
+        });
+      });
+
+      it("should handle undefined data", () => {
+        const result = formatter.formatSuccess(undefined);
+
+        expect(result).toEqual({
+          success: true,
+          data: undefined,
+        });
+      });
+
+      it("should handle array data", () => {
+        const data = [1, 2, 3];
+        const result = formatter.formatSuccess(data);
+
+        expect(result).toEqual({
+          success: true,
+          data: [1, 2, 3],
+        });
+      });
+    });
+
+    describe("formatError", () => {
+      it("should format Error objects", () => {
+        const error = new Error("Test error message");
+        const result = formatter.formatError(error.message);
+
+        expect(result).toEqual({
+          success: false,
+          error: "Test error message",
+        });
+      });
+
+      it("should format string errors", () => {
+        const result = formatter.formatError("String error");
+
+        expect(result).toEqual({
+          success: false,
+          error: "String error",
+        });
+      });
+
+      it("should handle custom error strings", () => {
+        const customErrorMessage = "Custom error with code 500";
+
+        const result = formatter.formatError(customErrorMessage);
+
+        expect(result).toEqual({
+          success: false,
+          error: customErrorMessage,
+        });
+      });
+
+      it("should handle empty errors", () => {
+        expect(formatter.formatError("")).toEqual({
+          success: false,
+          error: "",
+        });
+
+        expect(formatter.formatError("Unknown error")).toEqual({
+          success: false,
+          error: "Unknown error",
+        });
+      });
+    });
+  });
+
   describe("error handling", () => {
     it("should handle null agent gracefully", () => {
       expect(() => {
