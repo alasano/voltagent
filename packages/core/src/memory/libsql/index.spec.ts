@@ -244,8 +244,9 @@ describe("LibSQLStorage", () => {
 
   beforeEach(async () => {
     // Create a clean storage instance before each test
+    // Use in-memory database to avoid file locking issues
     storage = new LibSQLStorage({
-      url: "libsql://test.db",
+      url: ":memory:",
       debug: false,
     });
 

@@ -1142,18 +1142,6 @@ importers:
 
   packages/core:
     dependencies:
-      '@hono/node-server':
-        specifier: ^1.14.0
-        version: 1.14.0(hono@4.7.7)
-      '@hono/node-ws':
-        specifier: ^1.1.1
-        version: 1.1.1(@hono/node-server@1.14.0)(hono@4.7.7)
-      '@hono/swagger-ui':
-        specifier: ^0.5.1
-        version: 0.5.1(hono@4.7.7)
-      '@hono/zod-openapi':
-        specifier: ^0.19.6
-        version: 0.19.6(hono@4.7.7)(zod@3.24.2)
       '@libsql/client':
         specifier: ^0.15.0
         version: 0.15.0
@@ -1169,27 +1157,18 @@ importers:
       '@opentelemetry/sdk-trace-node':
         specifier: ^2.0.0
         version: 2.0.0(@opentelemetry/api@1.9.0)
-      '@types/ws':
-        specifier: ^8.18.1
-        version: 8.18.1
-      hono:
-        specifier: ^4.7.7
-        version: 4.7.7
       npm-check-updates:
         specifier: ^17.1.18
         version: 17.1.18
       uuid:
         specifier: ^9.0.1
         version: 9.0.1
-      ws:
-        specifier: ^8.18.1
-        version: 8.18.1
       zod:
         specifier: 3.24.2
         version: 3.24.2
       zod-from-json-schema:
-        specifier: ^0.0.5
-        version: 0.0.5
+        specifier: ^0.4.1
+        version: 0.4.1
     devDependencies:
       '@types/jest':
         specifier: ^29.5.0
@@ -1462,6 +1441,104 @@ importers:
         specifier: ^5.0.4
         version: 5.8.3
 
+  packages/server-adapter:
+    dependencies:
+      '@hono/zod-openapi':
+        specifier: ^0.19.6
+        version: 0.19.6(hono@4.7.7)(zod@3.24.2)
+      '@voltagent/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 3.24.2
+        version: 3.24.2
+      zod-from-json-schema:
+        specifier: ^0.4.1
+        version: 0.4.1
+    devDependencies:
+      '@types/jest':
+        specifier: ^29.5.0
+        version: 29.5.14
+      '@types/node':
+        specifier: ^18.15.11
+        version: 18.19.97
+      jest:
+        specifier: ^29.5.0
+        version: 29.7.0(@types/node@18.19.97)
+      ts-jest:
+        specifier: ^29.1.0
+        version: 29.2.6(@babel/core@7.27.1)(esbuild@0.17.19)(jest@29.7.0)(typescript@5.8.3)
+      tsup:
+        specifier: ^6.7.0
+        version: 6.7.0(typescript@5.8.3)
+      typescript:
+        specifier: ^5.0.4
+        version: 5.8.3
+
+  packages/server-hono:
+    dependencies:
+      '@hono/node-server':
+        specifier: ^1.14.0
+        version: 1.14.0(hono@4.7.7)
+      '@hono/node-ws':
+        specifier: ^1.1.6
+        version: 1.1.6(@hono/node-server@1.14.0)(hono@4.7.7)
+      '@hono/swagger-ui':
+        specifier: ^0.5.1
+        version: 0.5.1(hono@4.7.7)
+      '@hono/zod-openapi':
+        specifier: ^0.19.6
+        version: 0.19.6(hono@4.7.7)(zod@3.24.2)
+      '@opentelemetry/sdk-trace-base':
+        specifier: ^2.0.1
+        version: 2.0.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-trace-node':
+        specifier: ^2.0.0
+        version: 2.0.0(@opentelemetry/api@1.9.0)
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
+      '@voltagent/core':
+        specifier: workspace:*
+        version: link:../core
+      '@voltagent/server-adapter':
+        specifier: workspace:*
+        version: link:../server-adapter
+      hono:
+        specifier: ^4.7.7
+        version: 4.7.7
+      npm-check-updates:
+        specifier: ^17.1.18
+        version: 17.1.18
+      ws:
+        specifier: ^8.18.2
+        version: 8.18.2
+      zod:
+        specifier: 3.24.2
+        version: 3.24.2
+      zod-from-json-schema:
+        specifier: ^0.4.1
+        version: 0.4.1
+    devDependencies:
+      '@types/jest':
+        specifier: ^29.5.0
+        version: 29.5.14
+      '@types/node':
+        specifier: ^18.15.11
+        version: 18.19.97
+      jest:
+        specifier: ^29.5.0
+        version: 29.7.0(@types/node@18.19.97)
+      ts-jest:
+        specifier: ^29.1.0
+        version: 29.2.6(@babel/core@7.27.1)(esbuild@0.17.19)(jest@29.7.0)(typescript@5.8.3)
+      tsup:
+        specifier: ^6.7.0
+        version: 6.7.0(typescript@5.8.3)
+      typescript:
+        specifier: ^5.0.4
+        version: 5.8.3
+
   packages/supabase:
     dependencies:
       '@supabase/supabase-js':
@@ -1635,6 +1712,28 @@ importers:
         specifier: ^5.0.4
         version: 5.8.2
 
+  test-voltagent-app:
+    dependencies:
+      '@ai-sdk/openai':
+        specifier: ^1.3.22
+        version: 1.3.22(zod@3.24.2)
+      '@voltagent/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@voltagent/server-hono':
+        specifier: workspace:*
+        version: link:../packages/server-hono
+      '@voltagent/vercel-ai':
+        specifier: workspace:*
+        version: link:../packages/vercel-ai
+    devDependencies:
+      '@types/node':
+        specifier: ^20.12.12
+        version: 20.17.30
+      tsx:
+        specifier: ^4.19.2
+        version: 4.19.4
+
 packages:
 
   /@ai-sdk/amazon-bedrock@2.2.8(zod@3.24.2):
@@ -1673,6 +1772,17 @@ packages:
       zod: 3.24.2
     dev: false
 
+  /@ai-sdk/openai@1.3.22(zod@3.24.2):
+    resolution: {integrity: sha512-QwA+2EkG0QyjVR+7h6FE7iOu2ivNqAVMm9UJZkVxxTk5OIq5fFJDTEI/zICEMuHImTTXR2JjsL6EirJ28Jc4cw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
+    dependencies:
+      '@ai-sdk/provider': 1.1.3
+      '@ai-sdk/provider-utils': 2.2.8(zod@3.24.2)
+      zod: 3.24.2
+    dev: false
+
   /@ai-sdk/provider-utils@2.2.3(zod@3.24.2):
     resolution: {integrity: sha512-o3fWTzkxzI5Af7U7y794MZkYNEsxbjLam2nxyoUZSScqkacb7vZ3EYHLh21+xCcSSzEC161C7pZAGHtC0hTUMw==}
     engines: {node: '>=18'}
@@ -1699,6 +1809,18 @@ packages:
 
   /@ai-sdk/provider-utils@2.2.7(zod@3.24.2):
     resolution: {integrity: sha512-kM0xS3GWg3aMChh9zfeM+80vEZfXzR3JEUBdycZLtbRZ2TRT8xOj3WodGHPb06sUK5yD7pAXC/P7ctsi2fvUGQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.23.8
+    dependencies:
+      '@ai-sdk/provider': 1.1.3
+      nanoid: 3.3.8
+      secure-json-parse: 2.7.0
+      zod: 3.24.2
+    dev: false
+
+  /@ai-sdk/provider-utils@2.2.8(zod@3.24.2):
+    resolution: {integrity: sha512-fqhG+4sCVv8x7nFzYnFo19ryhAa3w096Kmc3hWxMQfW/TubPOmt3A6tYZhl4mUfQWWQMsuSkLrtjlWuXBVSGQA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.23.8
@@ -3763,8 +3885,8 @@ packages:
       hono: 4.7.7
     dev: false
 
-  /@hono/node-ws@1.1.1(@hono/node-server@1.14.0)(hono@4.7.7):
-    resolution: {integrity: sha512-iFJrAw5GuBTstehBzLY2FyW5rRlXmO3Uwpijpm4Liv75owNP/UjZe3KExsLuEK4w+u+xhvHqOoQUyEKWUvyghw==}
+  /@hono/node-ws@1.1.6(@hono/node-server@1.14.0)(hono@4.7.7):
+    resolution: {integrity: sha512-8ab2e0sr5FUbQJVYo0OxzaToQkiyeA9pOkLauzWHYNKfarhQ7XlISWsM3lShQYOOgrWpgXXxr1FTXXE0V7P/uw==}
     engines: {node: '>=18.14.1'}
     peerDependencies:
       '@hono/node-server': ^1.11.1
@@ -3772,7 +3894,7 @@ packages:
     dependencies:
       '@hono/node-server': 1.14.0(hono@4.7.7)
       hono: 4.7.7
-      ws: 8.18.1
+      ws: 8.18.2
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -4515,7 +4637,7 @@ packages:
     engines: {node: '>=16.0.0'}
     dependencies:
       chalk: 4.1.2
-      execa: 5.0.0
+      execa: 5.1.1
       strong-log-transformer: 2.1.0
     dev: true
 
@@ -5492,6 +5614,16 @@ packages:
       '@opentelemetry/semantic-conventions': 1.32.0
     dev: false
 
+  /@opentelemetry/core@2.0.1(@opentelemetry/api@1.9.0):
+    resolution: {integrity: sha512-MaZk9SJIDgo1peKevlbhP6+IwIiNPNmswNL4AF0WaQJLbHXjr9SrZMgS12+iqr9ToV4ZVosCcc0f8Rg67LXjxw==}
+    engines: {node: ^18.19.0 || >=20.6.0}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.10.0'
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/semantic-conventions': 1.32.0
+    dev: false
+
   /@opentelemetry/resources@1.30.1(@opentelemetry/api@1.9.0):
     resolution: {integrity: sha512-5UxZqiAgLYGFjS4s9qm5mBVo433u+dSPUFWVWXmLAD4wB65oMCoXaJP1KJa9DIYYMeHu3z4BZcStG3LC593cWA==}
     engines: {node: '>=14'}
@@ -5511,6 +5643,17 @@ packages:
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/core': 2.0.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/semantic-conventions': 1.32.0
+    dev: false
+
+  /@opentelemetry/resources@2.0.1(@opentelemetry/api@1.9.0):
+    resolution: {integrity: sha512-dZOB3R6zvBwDKnHDTB4X1xtMArB/d324VsbiPkX/Yu0Q8T2xceRthoIVFhJdvgVM2QhGVUyX9tzwiNxGtoBJUw==}
+    engines: {node: ^18.19.0 || >=20.6.0}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.3.0 <1.10.0'
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/core': 2.0.1(@opentelemetry/api@1.9.0)
       '@opentelemetry/semantic-conventions': 1.32.0
     dev: false
 
@@ -5535,6 +5678,18 @@ packages:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/core': 2.0.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/resources': 2.0.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/semantic-conventions': 1.32.0
+    dev: false
+
+  /@opentelemetry/sdk-trace-base@2.0.1(@opentelemetry/api@1.9.0):
+    resolution: {integrity: sha512-xYLlvk/xdScGx1aEqvxLwf6sXQLXCjk3/1SQT9X9AoN5rXRhkdvIFShuNNmtTEPRBqcsMbS4p/gJLNI2wXaDuQ==}
+    engines: {node: ^18.19.0 || >=20.6.0}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.3.0 <1.10.0'
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/core': 2.0.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/resources': 2.0.1(@opentelemetry/api@1.9.0)
       '@opentelemetry/semantic-conventions': 1.32.0
     dev: false
 
@@ -9199,9 +9354,9 @@ packages:
     engines: {node: '>=10'}
     dependencies:
       cross-spawn: 7.0.6
-      get-stream: 6.0.0
+      get-stream: 6.0.1
       human-signals: 2.1.0
-      is-stream: 2.0.0
+      is-stream: 2.0.1
       merge-stream: 2.0.0
       npm-run-path: 4.0.1
       onetime: 5.1.2
@@ -9888,7 +10043,7 @@ packages:
       fs.realpath: 1.0.0
       inflight: 1.0.6
       inherits: 2.0.4
-      minimatch: 3.0.5
+      minimatch: 3.1.2
       once: 1.4.0
       path-is-absolute: 1.0.1
     dev: true
@@ -12907,7 +13062,7 @@ packages:
       array-differ: 3.0.0
       array-union: 2.1.0
       arrify: 2.0.1
-      minimatch: 3.0.5
+      minimatch: 3.1.2
     dev: true
 
   /mustache@4.2.0:
@@ -16630,12 +16785,6 @@ packages:
   /yoctocolors-cjs@2.1.2:
     resolution: {integrity: sha512-cYVsTjKl8b+FrnidjibDWskAv7UKOfcwaVZdp/it9n1s9fU3IkgDbhdIRKCW4JDsAlECJY0ytoVPT3sK6kideA==}
     engines: {node: '>=18'}
-    dev: false
-
-  /zod-from-json-schema@0.0.5:
-    resolution: {integrity: sha512-zYEoo86M1qpA1Pq6329oSyHLS785z/mTwfr9V1Xf/ZLhuuBGaMlDGu/pDVGVUe4H4oa1EFgWZT53DP0U3oT9CQ==}
-    dependencies:
-      zod: 3.24.2
     dev: false
 
   /zod-from-json-schema@0.4.1:
