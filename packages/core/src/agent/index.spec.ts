@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { AgentEventEmitter } from "../events";
 import type { Memory, MemoryMessage } from "../memory/types";
-import { AgentRegistry } from "../server/registry";
+import { LocalAgentRegistry } from "../registry/local";
 import { createTool } from "../tool";
 import { Agent } from "./index";
 import type {
@@ -836,16 +836,18 @@ describe("Agent", () => {
   });
 
   describe("events", () => {
-    it("should register agent when created", () => {
+    it("should register agent when created with LocalAgentRegistry", () => {
+      const registry = new LocalAgentRegistry();
       const newAgent = new TestAgent({
         name: "New Agent",
         model: mockModel,
         llm: mockProvider,
         instructions: "A helpful AI assistant",
+        registry,
       });
 
-      // Register the agent through AgentRegistry
-      AgentRegistry.getInstance().registerAgent(newAgent);
+      // Register the agent through LocalAgentRegistry
+      registry.registerAgent(newAgent);
 
       expect(mockEventEmitter.emitAgentRegistered).toHaveBeenCalledWith(newAgent.id);
     });
