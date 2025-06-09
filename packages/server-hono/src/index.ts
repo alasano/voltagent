@@ -5,6 +5,7 @@ import {
   type VoltAgentExporter,
   checkForUpdates,
   devLogger,
+  _globalCustomEndpoints,
 } from "@voltagent/core";
 import type { CustomEndpointDefinition } from "@voltagent/server-adapter";
 import { BatchSpanProcessor, type SpanExporter } from "@opentelemetry/sdk-trace-base";
@@ -130,9 +131,12 @@ export async function _startLegacyHonoServer(options: any): Promise<void> {
     });
   }
 
+  // Combine custom endpoints from both sources for legacy compatibility
+  const allCustomEndpoints = [...(options.customEndpoints || []), ..._globalCustomEndpoints];
+
   const server = new HonoVoltServer(registry, {
     port: options.port,
-    customEndpoints: options.customEndpoints,
+    customEndpoints: allCustomEndpoints.length > 0 ? allCustomEndpoints : undefined,
   });
 
   await server.start();

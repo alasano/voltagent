@@ -1,16 +1,6 @@
 import { z } from "zod";
 import type { RouteHandler, HttpMethod } from "./types";
 
-export type CustomEndpointHandler = (
-  params: Record<string, string>,
-  context: {
-    body?: any;
-    query?: Record<string, string | string[]>;
-    headers?: Record<string, string>;
-    [key: string]: any;
-  },
-) => Promise<any>;
-
 /**
  * Schema for validating custom endpoint definitions
  * Matches the original implementation exactly
@@ -62,7 +52,9 @@ export class CustomEndpointError extends Error {
 
 /**
  * Validates a custom endpoint definition
- * Direct port from the original implementation
+ * @param endpoint The endpoint definition to validate
+ * @returns The validated endpoint definition
+ * @throws CustomEndpointError if the endpoint definition is invalid
  */
 export function validateCustomEndpoint(
   endpoint: CustomEndpointDefinition,
@@ -79,7 +71,9 @@ export function validateCustomEndpoint(
 
 /**
  * Validates an array of custom endpoint definitions
- * Direct port from the original implementation
+ * @param endpoints The endpoint definitions to validate
+ * @returns The validated endpoint definitions
+ * @throws CustomEndpointError if any endpoint definition is invalid
  */
 export function validateCustomEndpoints(
   endpoints: CustomEndpointDefinition[],

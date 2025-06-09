@@ -73,7 +73,7 @@ describe("HonoServerAdapter", () => {
 
     it.each(methods)("should add %s route", (method) => {
       const handler: RouteHandler = jest.fn();
-      adapter.addRoute("/test", method, handler);
+      adapter.addRoute({ path: "/test", method, handler });
 
       expect(mockApp[method]).toHaveBeenCalledWith("/test", expect.any(Function));
     });
@@ -82,7 +82,7 @@ describe("HonoServerAdapter", () => {
       const handler: RouteHandler = jest.fn().mockResolvedValue({ result: "success" });
       const params = { id: "123" };
 
-      adapter.addRoute("/test/:id", "get", handler);
+      adapter.addRoute({ path: "/test/:id", method: "get", handler: handler });
 
       const registeredHandler = mockApp.get.mock.calls[0][1];
       const mockContext = createMockHonoContext();
@@ -97,7 +97,7 @@ describe("HonoServerAdapter", () => {
       const handler: RouteHandler = jest.fn().mockResolvedValue({ result: "success" });
       const query = { filter: "active" };
 
-      adapter.addRoute("/test", "get", handler);
+      adapter.addRoute({ path: "/test", method: "get", handler: handler });
 
       const registeredHandler = mockApp.get.mock.calls[0][1];
       const mockContext = createMockHonoContext();
@@ -112,7 +112,7 @@ describe("HonoServerAdapter", () => {
       const handler: RouteHandler = jest.fn().mockResolvedValue({ result: "success" });
       const body = { name: "test" };
 
-      adapter.addRoute("/test", "post", handler);
+      adapter.addRoute({ path: "/test", method: "post", handler: handler });
 
       const registeredHandler = mockApp.post.mock.calls[0][1];
       const mockContext = createMockHonoContext({ body });
@@ -128,7 +128,7 @@ describe("HonoServerAdapter", () => {
         content: "<html>Test</html>",
       });
 
-      adapter.addRoute("/test", "get", handler);
+      adapter.addRoute({ path: "/test", method: "get", handler: handler });
 
       const registeredHandler = mockApp.get.mock.calls[0][1];
       const mockContext = createMockHonoContext();
@@ -144,7 +144,7 @@ describe("HonoServerAdapter", () => {
 
       const handler: RouteHandler = jest.fn().mockRejectedValue(new Error("Test error"));
 
-      adapter.addRoute("/test", "get", handler);
+      adapter.addRoute({ path: "/test", method: "get", handler: handler });
 
       const registeredHandler = mockApp.get.mock.calls[0][1];
       const mockContext = createMockHonoContext();
@@ -168,7 +168,7 @@ describe("HonoServerAdapter", () => {
     it("should handle body parsing errors gracefully", async () => {
       const handler: RouteHandler = jest.fn().mockResolvedValue({ success: true });
 
-      adapter.addRoute("/test", "post", handler);
+      adapter.addRoute({ path: "/test", method: "post", handler: handler });
 
       const registeredHandler = mockApp.post.mock.calls[0][1];
       const mockContext = createMockHonoContext();
@@ -188,7 +188,7 @@ describe("HonoServerAdapter", () => {
   describe("addStreamingRoute", () => {
     it("should add streaming route", () => {
       const handler = jest.fn();
-      adapter.addStreamingRoute("/stream", "post", handler);
+      adapter.addStreamingRoute({ path: "/stream", method: "post", handler: handler });
 
       expect(mockApp.post).toHaveBeenCalledWith("/stream", expect.any(Function));
     });
@@ -202,7 +202,7 @@ describe("HonoServerAdapter", () => {
       };
       const handler = jest.fn().mockResolvedValue({ textStream });
 
-      adapter.addStreamingRoute("/stream", "post", handler);
+      adapter.addStreamingRoute({ path: "/stream", method: "post", handler: handler });
 
       const registeredHandler = mockApp.post.mock.calls[0][1];
       const mockContext = createMockHonoContext();
@@ -230,7 +230,7 @@ describe("HonoServerAdapter", () => {
       });
       const handler = jest.fn().mockResolvedValue({ objectStream });
 
-      adapter.addStreamingRoute("/stream", "post", handler);
+      adapter.addStreamingRoute({ path: "/stream", method: "post", handler: handler });
 
       const registeredHandler = mockApp.post.mock.calls[0][1];
       const mockContext = createMockHonoContext();
@@ -255,7 +255,7 @@ describe("HonoServerAdapter", () => {
 
       const handler = jest.fn().mockRejectedValue(new Error("Stream error"));
 
-      adapter.addStreamingRoute("/stream", "post", handler);
+      adapter.addStreamingRoute({ path: "/stream", method: "post", handler: handler });
 
       const registeredHandler = mockApp.post.mock.calls[0][1];
       const mockContext = createMockHonoContext();
@@ -284,7 +284,7 @@ describe("HonoServerAdapter", () => {
     it("should handle missing headers gracefully", async () => {
       const handler: RouteHandler = jest.fn().mockResolvedValue({ success: true });
 
-      adapter.addRoute("/api/agents/:id/process", "post", handler);
+      adapter.addRoute({ path: "/api/agents/:id/process", method: "post", handler: handler });
 
       const registeredHandler = mockApp.post.mock.calls[0][1];
       const mockContext = createMockHonoContext({
@@ -305,7 +305,7 @@ describe("HonoServerAdapter", () => {
     it("should not parse body for GET requests", async () => {
       const handler: RouteHandler = jest.fn().mockResolvedValue({ success: true });
 
-      adapter.addRoute("/test", "get", handler);
+      adapter.addRoute({ path: "/test", method: "get", handler: handler });
 
       const registeredHandler = mockApp.get.mock.calls[0][1];
       const mockContext = createMockHonoContext();

@@ -39,4 +39,4 @@ export type {
   ApiResponse,
 } from "./types";
 
-export type { CustomEndpointDefinition, CustomEndpointHandler } from "./custom-endpoints";
+export type { CustomEndpointDefinition } from "./custom-endpoints";

@@ -1,5 +1,5 @@
 import { ServerAdapter } from "./base";
-import type { HttpMethod, RouteHandler } from "../types";
+import type { HttpMethod, RouteHandler, RouteDefinition } from "../types";
 
 // Concrete implementation of ServerAdapter for testing
 class TestServerAdapter extends ServerAdapter {
@@ -9,8 +9,12 @@ class TestServerAdapter extends ServerAdapter {
     handler: RouteHandler;
   }> = [];
 
-  addRoute(path: string, method: HttpMethod, handler: RouteHandler): void {
-    this.routes.push({ path, method, handler });
+  addRoute(route: RouteDefinition): void {
+    this.routes.push({
+      path: route.path,
+      method: route.method,
+      handler: route.handler,
+    });
   }
 
   // Test helper methods
@@ -41,7 +45,7 @@ describe("ServerAdapter", () => {
     it("should register a GET route", () => {
       const handler: RouteHandler = jest.fn().mockResolvedValue({ success: true });
 
-      adapter.addRoute("/test-get", "get", handler);
+      adapter.addRoute({ path: "/test-get", method: "get", handler });
 
       const registeredRoute = adapter.findRoute("/test-get", "get");
       expect(registeredRoute).toBeDefined();
@@ -53,7 +57,7 @@ describe("ServerAdapter", () => {
     it("should register a POST route", () => {
       const handler: RouteHandler = jest.fn().mockResolvedValue({ success: true });
 
-      adapter.addRoute("/test-post", "post", handler);
+      adapter.addRoute({ path: "/test-post", method: "post", handler: handler });
 
       const registeredRoute = adapter.findRoute("/test-post", "post");
       expect(registeredRoute).toBeDefined();
@@ -65,7 +69,7 @@ describe("ServerAdapter", () => {
 
       methods.forEach((method) => {
         const handler: RouteHandler = jest.fn().mockResolvedValue({ success: true });
-        adapter.addRoute(`/test-${method}`, method, handler);
+        adapter.addRoute({ path: `/test-${method}`, method, handler });
       });
 
       expect(adapter.getRegisteredRoutes()).toHaveLength(methods.length);
@@ -81,8 +85,8 @@ describe("ServerAdapter", () => {
       const getHandler: RouteHandler = jest.fn().mockResolvedValue({ method: "GET" });
       const postHandler: RouteHandler = jest.fn().mockResolvedValue({ method: "POST" });
 
-      adapter.addRoute("/same-path", "get", getHandler);
-      adapter.addRoute("/same-path", "post", postHandler);
+      adapter.addRoute({ path: "/same-path", method: "get", handler: getHandler });
+      adapter.addRoute({ path: "/same-path", method: "post", handler: postHandler });
 
       const getRoute = adapter.findRoute("/same-path", "get");
       const postRoute = adapter.findRoute("/same-path", "post");
@@ -96,7 +100,7 @@ describe("ServerAdapter", () => {
     it("should register public routes", () => {
       const handler: RouteHandler = jest.fn().mockResolvedValue({ success: true });
 
-      adapter.addRoute("/public-test", "get", handler);
+      adapter.addRoute({ path: "/public-test", method: "get", handler: handler });
 
       const registeredRoute = adapter.findRoute("/public-test", "get");
       expect(registeredRoute).toBeDefined();
@@ -109,7 +113,7 @@ describe("ServerAdapter", () => {
 
       methods.forEach((method) => {
         const handler: RouteHandler = jest.fn().mockResolvedValue({ success: true });
-        adapter.addRoute(`/protected-${method}`, method, handler);
+        adapter.addRoute({ path: `/protected-${method}`, method, handler });
       });
 
       methods.forEach((method) => {
@@ -134,8 +138,8 @@ describe("ServerAdapter", () => {
       const handler1: RouteHandler = jest.fn();
       const handler2: RouteHandler = jest.fn();
 
-      adapter.addRoute("/route1", "get", handler1);
-      adapter.addRoute("/route2", "post", handler2);
+      adapter.addRoute({ path: "/route1", method: "get", handler: handler1 });
+      adapter.addRoute({ path: "/route2", method: "post", handler: handler2 });
 
       const routes = adapter.getRegisteredRoutes();
       expect(routes).toHaveLength(2);
@@ -160,14 +164,14 @@ describe("ServerAdapter", () => {
       // Most validation should be done by the concrete implementation
       // Base class should accept whatever the implementation allows
       expect(() => {
-        adapter.addRoute("", "get", handler);
+        adapter.addRoute({ path: "", method: "get", handler });
       }).not.toThrow();
     });
 
     it("should handle null/undefined handlers gracefully", () => {
       // Base class should accept null handlers - validation in implementation
       expect(() => {
-        adapter.addRoute("/test", "get", null as any);
+        adapter.addRoute({ path: "/test", method: "get", handler: null as any });
       }).not.toThrow();
     });
   });
@@ -197,7 +201,7 @@ describe("ServerAdapter", () => {
 
       routes.forEach(({ path, method }) => {
         const handler = jest.fn().mockResolvedValue({ success: true });
-        adapter.addRoute(path, method, handler);
+        adapter.addRoute({ path, method, handler });
       });
 
       const registeredRoutes = adapter.getRegisteredRoutes();
@@ -225,7 +229,7 @@ describe("ServerAdapter", () => {
 
       restfulRoutes.forEach(({ method, path }) => {
         const handler: RouteHandler = jest.fn();
-        adapter.addRoute(path, method, handler);
+        adapter.addRoute({ path, method, handler });
       });
 
       expect(adapter.getRegisteredRoutes()).toHaveLength(restfulRoutes.length);

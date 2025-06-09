@@ -79,10 +79,53 @@ export class HonoServerAdapter extends ServerAdapter {
       // Fallback to simple route
       const app = this.app as any;
       app[route.method](route.path, async (c: any) => {
-        const params = c.req.param();
-        const query = c.req.query();
-        const body =
-          route.method !== "get" && route.method !== "head"
+        try {
+          const params = c.req.param();
+          const query = c.req.query();
+          const body =
+            route.method !== "get" && route.method !== "head"
+              ? await c.req.json().catch(() => undefined)
+              : undefined;
+
+          const context = {
+            params,
+            query,
+            body,
+            headers: this.extractHeaders(c),
+            context: c,
+          };
+
+          const result = await route.handler(params, context);
+
+          if (result?.contentType === "text/html") {
+            return c.html(result.content);
+          }
+
+          return c.json(result);
+        } catch (error) {
+          console.error(`Error in route ${route.method.toUpperCase()} ${route.path}:`, error);
+          return c.json(
+            {
+              success: false,
+              error: error instanceof Error ? error.message : "Internal server error",
+            },
+            500,
+          );
+        }
+      });
+    }
+  }
+
+  addStreamingRoute(route: RouteDefinition): void {
+    this.registeredRoutes.push(route);
+
+    const registerHandler = async (c: any) => {
+      try {
+        const params = route.openapi?.request?.params ? c.req.valid("param") : c.req.param();
+        const query = route.openapi?.request?.query ? c.req.valid("query") : c.req.query();
+        const body = route.openapi?.request?.body
+          ? c.req.valid("json")
+          : route.method !== "get" && route.method !== "head"
             ? await c.req.json().catch(() => undefined)
             : undefined;
 
@@ -94,83 +137,65 @@ export class HonoServerAdapter extends ServerAdapter {
           context: c,
         };
 
-        const result = await route.handler(params, context);
+        const streamResult = await route.handler(params, context);
 
-        if (result?.contentType === "text/html") {
-          return c.html(result.content);
-        }
+        // Create SSE stream
+        const stream = new ReadableStream({
+          async start(controller) {
+            const encoder = new TextEncoder();
 
-        return c.json(result);
-      });
-    }
-  }
+            const send = (data: any) => {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+            };
 
-  addStreamingRoute(route: RouteDefinition): void {
-    this.registeredRoutes.push(route);
-
-    const registerHandler = async (c: any) => {
-      const params = route.openapi?.request?.params ? c.req.valid("param") : c.req.param();
-      const query = route.openapi?.request?.query ? c.req.valid("query") : c.req.query();
-      const body = route.openapi?.request?.body
-        ? c.req.valid("json")
-        : route.method !== "get" && route.method !== "head"
-          ? await c.req.json().catch(() => undefined)
-          : undefined;
-
-      const context = {
-        params,
-        query,
-        body,
-        headers: this.extractHeaders(c),
-        context: c,
-      };
-
-      const streamResult = await route.handler(params, context);
-
-      // Create SSE stream
-      const stream = new ReadableStream({
-        async start(controller) {
-          const encoder = new TextEncoder();
-
-          const send = (data: any) => {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-          };
-
-          try {
-            if (streamResult?.textStream) {
-              for await (const chunk of streamResult.textStream) {
-                send({ text: chunk, type: "text", timestamp: new Date().toISOString() });
+            try {
+              if (streamResult?.textStream) {
+                for await (const chunk of streamResult.textStream) {
+                  send({ text: chunk, type: "text", timestamp: new Date().toISOString() });
+                }
+              } else if (streamResult?.objectStream) {
+                const reader = streamResult.objectStream.getReader();
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  send({ object: value, type: "object", timestamp: new Date().toISOString() });
+                }
+                reader.releaseLock();
               }
-            } else if (streamResult?.objectStream) {
-              const reader = streamResult.objectStream.getReader();
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                send({ object: value, type: "object", timestamp: new Date().toISOString() });
-              }
-              reader.releaseLock();
+
+              send({ done: true, type: "completion", timestamp: new Date().toISOString() });
+              controller.close();
+            } catch (error) {
+              send({
+                error: error instanceof Error ? error.message : "Streaming failed",
+                type: "error",
+                timestamp: new Date().toISOString(),
+              });
+              controller.close();
             }
+          },
+        });
 
-            send({ done: true, type: "completion", timestamp: new Date().toISOString() });
-            controller.close();
-          } catch (error) {
-            send({
-              error: error instanceof Error ? error.message : "Streaming failed",
-              type: "error",
-              timestamp: new Date().toISOString(),
-            });
-            controller.close();
-          }
-        },
-      });
-
-      return c.body(stream, {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        },
-      });
+        return c.body(stream, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+          },
+        });
+      } catch (error) {
+        console.error(
+          `Error in streaming route ${route.method.toUpperCase()} ${route.path}:`,
+          error,
+        );
+        return c.json(
+          {
+            success: false,
+            error: error instanceof Error ? error.message : "Internal server error",
+          },
+          500,
+        );
+      }
     };
 
     if (route.openapi) {

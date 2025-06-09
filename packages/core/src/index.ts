@@ -40,6 +40,30 @@ export * from "./voice";
 export * from "./telemetry/exporter";
 export type { UsageInfo } from "./agent/providers";
 
+// Minimal type definition for legacy API compatibility only
+// This is NOT imported by server packages - they have their own definitions
+interface LegacyCustomEndpointDefinition {
+  path: string;
+  method: "get" | "post" | "put" | "patch" | "delete" | "options" | "head";
+  handler: (...args: any[]) => any | Promise<any>;
+  description?: string;
+}
+
+// Global store for custom endpoints (for legacy API compatibility)
+const globalCustomEndpoints: LegacyCustomEndpointDefinition[] = [];
+
+/**
+ * Register custom endpoints globally (for legacy VoltAgent compatibility)
+ * @deprecated Use customEndpoints option in createVoltServer from @voltagent/server-hono instead
+ * @param endpoints Array of custom endpoint definitions
+ */
+export function registerCustomEndpoints(endpoints: LegacyCustomEndpointDefinition[]): void {
+  globalCustomEndpoints.push(...endpoints);
+}
+
+// Export for internal use by server packages
+export { globalCustomEndpoints as _globalCustomEndpoints };
+
 // This is the full definition of the options for the DEPRECATED VoltAgent class.
 // It's defined here to support the legacy constructor signature.
 // It includes types that will be dynamically imported.
@@ -48,7 +72,7 @@ type VoltAgentOptions = {
   port?: number;
   autoStart?: boolean;
   checkDependencies?: boolean;
-  customEndpoints?: any[]; // Using 'any' as the definition is in the server package.
+  customEndpoints?: LegacyCustomEndpointDefinition[];
   telemetryExporter?: (SpanExporter | VoltAgentExporter) | (SpanExporter | VoltAgentExporter)[];
   serverMode?: "auto" | "manual" | "disabled";
   registry?: LocalAgentRegistry; // Legacy option, now handled by server packages.
