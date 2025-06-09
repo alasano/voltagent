@@ -1,6 +1,7 @@
 import type { Span } from "@opentelemetry/api";
 import type { BaseMessage } from "../agent/providers/base/types";
 import type { Memory, MemoryOptions } from "../memory/types";
+import type { LocalAgentRegistry } from "../registry";
 import type { VoltAgentExporter } from "../telemetry/exporter";
 import type { Tool, Toolkit } from "../tool";
 import type { AgentHistoryEntry } from "./history";
@@ -99,6 +100,13 @@ export type AgentOptions = {
    * Used to send telemetry data to an external service
    */
   telemetryExporter?: VoltAgentExporter;
+
+  /**
+   * Optional LocalAgentRegistry for server-independent usage
+   * If provided, the agent can access registry-specific functionality
+   * If not provided, agent operates independently without registry features
+   */
+  registry?: LocalAgentRegistry;
 } & (
   | {
       /**

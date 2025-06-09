@@ -15,7 +15,7 @@ import type {
 } from "../events/types";
 import { MemoryManager } from "../memory";
 import type { BaseRetriever } from "../retriever/retriever";
-import { AgentRegistry } from "../server/registry";
+import { LocalAgentRegistry } from "../registry";
 import type { VoltAgentExporter } from "../telemetry/exporter";
 import type { Tool, Toolkit } from "../tool";
 import { ToolManager } from "../tool";
@@ -142,6 +142,11 @@ export class Agent<TProvider extends { llm: LLMProvider<unknown> }> {
   private retriever?: BaseRetriever;
 
   /**
+   * Optional registry for server-independent usage
+   */
+  private registry?: LocalAgentRegistry;
+
+  /**
    * Create a new agent
    */
   constructor(
@@ -167,6 +172,7 @@ export class Agent<TProvider extends { llm: LLMProvider<unknown> }> {
     this.retriever = options.retriever;
     this.voice = options.voice;
     this.markdown = options.markdown ?? false;
+    this.registry = options.registry || new LocalAgentRegistry();
 
     // Initialize hooks
     if (options.hooks) {
@@ -182,11 +188,16 @@ export class Agent<TProvider extends { llm: LLMProvider<unknown> }> {
     this.toolManager = new ToolManager(options.tools || []);
 
     // Initialize sub-agent manager
-    this.subAgentManager = new SubAgentManager(this.name, options.subAgents || []);
+    this.subAgentManager = new SubAgentManager(
+      this.id,
+      this.name,
+      options.subAgents || [],
+      this.registry,
+    );
 
     // Initialize history manager
-    const chosenExporter =
-      options.telemetryExporter || AgentRegistry.getInstance().getGlobalVoltAgentExporter();
+    // Only use AgentRegistry for global exporter if no registry is provided (legacy mode)
+    const chosenExporter = options.telemetryExporter;
     this.historyManager = new HistoryManager(
       this.id,
       this.memoryManager,
@@ -2294,6 +2305,14 @@ export class Agent<TProvider extends { llm: LLMProvider<unknown> }> {
    */
   public isTelemetryConfigured(): boolean {
     return this.historyManager.isExporterConfigured();
+  }
+
+  /**
+   * Get the registry instance if one was provided during agent creation
+   * @returns The LocalAgentRegistry instance or undefined if not provided
+   */
+  public getRegistry(): LocalAgentRegistry | undefined {
+    return this.registry;
   }
 
   /**
