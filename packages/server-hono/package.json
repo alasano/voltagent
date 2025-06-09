@@ -1,0 +1,54 @@
+{
+  "name": "@voltagent/server-hono",
+  "version": "0.1.0",
+  "description": "Hono server implementation for VoltAgent",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "biome check .",
+    "lint:fix": "biome check . --write",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.0",
+    "@hono/node-ws": "^1.1.6",
+    "@hono/swagger-ui": "^0.5.1",
+    "@hono/zod-openapi": "^0.19.6",
+    "@opentelemetry/sdk-trace-base": "^2.0.1",
+    "@opentelemetry/sdk-trace-node": "^2.0.0",
+    "@types/ws": "^8.18.1",
+    "@voltagent/core": "workspace:*",
+    "@voltagent/server-adapter": "workspace:*",
+    "hono": "^4.7.7",
+    "npm-check-updates": "^17.1.18",
+    "ws": "^8.18.2",
+    "zod-from-json-schema": "^0.4.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^18.15.11",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "tsup": "^6.7.0",
+    "typescript": "^5.0.4"
+  },
+  "peerDependencies": {
+    "zod": "3.24.2"
+  }
+}
