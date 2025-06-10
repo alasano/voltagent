@@ -399,6 +399,9 @@ export type OperationContext = {
 
   /** Map to store active OpenTelemetry spans for tool calls within this operation */
   toolSpans?: Map<string, Span>; // Key: toolCallId
+
+  /** Conversation steps for building full message history including tool calls/results */
+  conversationSteps?: StepWithContent[];
 };
 
 /**
