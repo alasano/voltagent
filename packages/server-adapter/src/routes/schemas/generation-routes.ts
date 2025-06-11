@@ -66,7 +66,10 @@ export const generateTextRoute: RouteDefinition = {
 
     const { input, options = {} } = context.body || {};
     const response = await agent.generateText(input, options);
-    return response;
+
+    // TODO: Fix this once we can force a change to the response type
+    const fixBadResponseTypeForBackwardsCompatibility = response as any;
+    return { success: true, data: fixBadResponseTypeForBackwardsCompatibility };
   },
 };
 
@@ -132,7 +135,13 @@ export const generateObjectRoute: RouteDefinition = {
     }
 
     const response = await agent.generateObject(input, zodSchema, options);
-    return response;
+
+    // TODO: Fix this once we can force a change to the response type
+    const fixBadResponseTypeForBackwardsCompatibility = response as any;
+    return {
+      success: true,
+      data: fixBadResponseTypeForBackwardsCompatibility,
+    };
   },
 };
 

@@ -36,6 +36,7 @@ export * from "./retriever";
 export * from "./mcp";
 export { LocalAgentRegistry } from "./registry/local";
 export * from "./utils/update";
+export { createAsyncIterableStream, type AsyncIterableStream } from "./utils/async-iterable-stream";
 export * from "./voice";
 export * from "./telemetry/exporter";
 export type { UsageInfo } from "./agent/providers";

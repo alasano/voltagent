@@ -37,10 +37,10 @@ import type {
   AgentOptions,
   AgentStatus,
   CommonGenerateOptions,
-  InferGenerateObjectResponse,
-  InferGenerateTextResponse,
-  InferStreamObjectResponse,
-  InferStreamTextResponse,
+  InferGenerateObjectResponseFromProvider,
+  InferGenerateTextResponseFromProvider,
+  InferStreamObjectResponseFromProvider,
+  InferStreamTextResponseFromProvider,
   InternalGenerateOptions,
   ModelType,
   OperationContext,
@@ -755,7 +755,7 @@ export class Agent<TProvider extends { llm: LLMProvider<unknown> }> {
   async generateText(
     input: string | BaseMessage[],
     options: PublicGenerateOptions = {},
-  ): Promise<InferGenerateTextResponse<TProvider>> {
+  ): Promise<InferGenerateTextResponseFromProvider<TProvider>> {
     const internalOptions: InternalGenerateOptions = options as InternalGenerateOptions;
     const {
       userId,
@@ -1093,8 +1093,7 @@ export class Agent<TProvider extends { llm: LLMProvider<unknown> }> {
         status: "completed" as any,
       });
 
-      const typedResponse = response as InferGenerateTextResponse<TProvider>;
-      return typedResponse;
+      return response;
     } catch (error) {
       const voltagentError = error as VoltAgentError;
 
@@ -1182,7 +1181,7 @@ export class Agent<TProvider extends { llm: LLMProvider<unknown> }> {
   async streamText(
     input: string | BaseMessage[],
     options: PublicGenerateOptions = {},
-  ): Promise<InferStreamTextResponse<TProvider>> {
+  ): Promise<InferStreamTextResponseFromProvider<TProvider>> {
     const internalOptions: InternalGenerateOptions = options as InternalGenerateOptions;
     const {
       userId,
@@ -1667,18 +1666,17 @@ export class Agent<TProvider extends { llm: LLMProvider<unknown> }> {
         });
       },
     });
-    const typedResponse = response as InferStreamTextResponse<TProvider>;
-    return typedResponse;
+    return response;
   }
 
   /**
    * Generate a structured object response
    */
-  async generateObject<T extends z.ZodType>(
+  async generateObject<TSchema extends z.ZodType>(
     input: string | BaseMessage[],
-    schema: T,
+    schema: TSchema,
     options: PublicGenerateOptions = {},
-  ): Promise<InferGenerateObjectResponse<TProvider>> {
+  ): Promise<InferGenerateObjectResponseFromProvider<TProvider, TSchema>> {
     const internalOptions: InternalGenerateOptions = options as InternalGenerateOptions;
     const {
       userId,
@@ -1859,7 +1857,7 @@ export class Agent<TProvider extends { llm: LLMProvider<unknown> }> {
         status: "completed" as any,
       });
 
-      const standardizedOutput: StandardizedObjectResult<z.infer<T>> = {
+      const standardizedOutput: StandardizedObjectResult<z.infer<TSchema>> = {
         object: response.object,
         usage: response.usage,
         finishReason: response.finishReason,
@@ -1874,8 +1872,7 @@ export class Agent<TProvider extends { llm: LLMProvider<unknown> }> {
         conversationId: finalConversationId,
         context: operationContext,
       });
-      const typedResponse = response as InferGenerateObjectResponse<TProvider>;
-      return typedResponse;
+      return response;
     } catch (error) {
       const voltagentError = error as VoltAgentError;
 
@@ -1958,11 +1955,11 @@ export class Agent<TProvider extends { llm: LLMProvider<unknown> }> {
   /**
    * Stream a structured object response
    */
-  async streamObject<T extends z.ZodType>(
+  async streamObject<TSchema extends z.ZodType>(
     input: string | BaseMessage[],
-    schema: T,
+    schema: TSchema,
     options: PublicGenerateOptions = {},
-  ): Promise<InferStreamObjectResponse<TProvider>> {
+  ): Promise<InferStreamObjectResponseFromProvider<TProvider, TSchema>> {
     const internalOptions: InternalGenerateOptions = options as InternalGenerateOptions;
     const {
       userId,
@@ -2077,7 +2074,7 @@ export class Agent<TProvider extends { llm: LLMProvider<unknown> }> {
             await (provider.onStepFinish as (step: StepWithContent) => Promise<void>)(step);
           }
         },
-        onFinish: async (result: StreamObjectFinishResult<z.infer<T>>) => {
+        onFinish: async (result: StreamObjectFinishResult<z.infer<TSchema>>) => {
           if (!operationContext.isActive) {
             return;
           }
@@ -2163,7 +2160,7 @@ export class Agent<TProvider extends { llm: LLMProvider<unknown> }> {
             context: operationContext,
           });
           if (provider?.onFinish) {
-            await (provider.onFinish as StreamObjectOnFinishCallback<z.infer<T>>)(
+            await (provider.onFinish as StreamObjectOnFinishCallback<z.infer<TSchema>>)(
               resultWithContext,
             );
           }
@@ -2258,8 +2255,7 @@ export class Agent<TProvider extends { llm: LLMProvider<unknown> }> {
           });
         },
       });
-      const typedResponse = response as InferStreamObjectResponse<TProvider>;
-      return typedResponse;
+      return response;
     } catch (error) {
       operationContext.isActive = false;
       await this.hooks.onEnd?.({

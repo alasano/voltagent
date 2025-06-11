@@ -1,5 +1,12 @@
 import type { Span } from "@opentelemetry/api";
-import type { BaseMessage } from "../agent/providers/base/types";
+import type { z } from "zod";
+import type {
+  BaseMessage,
+  ProviderObjectResponse,
+  ProviderObjectStreamResponse,
+  ProviderTextResponse,
+  ProviderTextStreamResponse,
+} from "../agent/providers/base/types";
 import type { Memory, MemoryOptions } from "../memory/types";
 import type { LocalAgentRegistry } from "../registry";
 import type { VoltAgentExporter } from "../telemetry/exporter";
@@ -148,29 +155,35 @@ export type ModelType<T> = T extends { llm: LLMProvider<any> }
 /**
  * Infer generate text response type
  */
-export type InferGenerateTextResponse<T extends { llm: LLMProvider<any> }> = Awaited<
-  ReturnType<T["llm"]["generateText"]>
->;
+export type InferGenerateTextResponseFromProvider<TProvider extends { llm: LLMProvider<any> }> =
+  ProviderTextResponse<InferOriginalResponseFromProvider<TProvider, "generateText">>;
 
 /**
  * Infer stream text response type
  */
-export type InferStreamTextResponse<T extends { llm: LLMProvider<any> }> = Awaited<
-  ReturnType<T["llm"]["streamText"]>
->;
+export type InferStreamTextResponseFromProvider<TProvider extends { llm: LLMProvider<any> }> =
+  ProviderTextStreamResponse<InferOriginalResponseFromProvider<TProvider, "streamText">>;
 
 /**
  * Infer generate object response type
  */
-export type InferGenerateObjectResponse<T extends { llm: LLMProvider<any> }> = Awaited<
-  ReturnType<T["llm"]["generateObject"]>
+export type InferGenerateObjectResponseFromProvider<
+  TProvider extends { llm: LLMProvider<any> },
+  TSchema extends z.ZodType,
+> = ProviderObjectResponse<
+  InferOriginalResponseFromProvider<TProvider, "generateObject">,
+  z.infer<TSchema>
 >;
 
 /**
  * Infer stream object response type
  */
-export type InferStreamObjectResponse<T extends { llm: LLMProvider<any> }> = Awaited<
-  ReturnType<T["llm"]["streamObject"]>
+export type InferStreamObjectResponseFromProvider<
+  TProvider extends { llm: LLMProvider<any> },
+  TSchema extends z.ZodType,
+> = ProviderObjectStreamResponse<
+  InferOriginalResponseFromProvider<TProvider, "streamObject">,
+  z.infer<TSchema>
 >;
 
 /**
@@ -575,3 +588,13 @@ export type AgentOperationOutput =
   | StreamTextFinishResult
   | StandardizedObjectResult<unknown> // Object type generalized
   | StreamObjectFinishResult<unknown>; // Object type generalized
+
+type InferResponseFromProvider<
+  TProvider extends { llm: LLMProvider<any> },
+  TMethod extends "generateText" | "streamText" | "generateObject" | "streamObject",
+> = Awaited<ReturnType<TProvider["llm"][TMethod]>>;
+
+type InferOriginalResponseFromProvider<
+  TProvider extends { llm: LLMProvider<any> },
+  TMethod extends "generateText" | "streamText" | "generateObject" | "streamObject",
+> = InferResponseFromProvider<TProvider, TMethod>["provider"];

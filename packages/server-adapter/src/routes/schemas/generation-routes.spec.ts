@@ -126,8 +126,11 @@ describe("Generation Routes", () => {
       expect(mockRegistry.getAgent).toHaveBeenCalledWith("agent-1");
       expect(mockAgent.generateText).toHaveBeenCalledWith("Test prompt", { temperature: 0.7 });
       expect(response).toEqual({
-        text: "Generated response",
-        usage: { totalTokens: 100 },
+        success: true,
+        data: {
+          text: "Generated response",
+          usage: { totalTokens: 100 },
+        },
       });
     });
 
@@ -341,8 +344,11 @@ describe("Generation Routes", () => {
         { temperature: 0.1 },
       );
       expect(response).toEqual({
-        object: { name: "John", age: 30 },
-        usage: { totalTokens: 150 },
+        success: true,
+        data: {
+          object: { name: "John", age: 30 },
+          usage: { totalTokens: 150 },
+        },
       });
     });
 
@@ -810,7 +816,7 @@ describe("Generation Routes", () => {
         body: { input: "Generate text", options: { temperature: 0.7 } },
       });
       const textResult = await generateTextRoute.handler(params, textContext, mockRegistry);
-      expect(textResult.text).toBe("Generated text");
+      expect(textResult.data.text).toBe("Generated text");
 
       // Test object generation
       const objectContext = createMockRouteContext({
@@ -820,7 +826,7 @@ describe("Generation Routes", () => {
         },
       });
       const objectResult = await generateObjectRoute.handler(params, objectContext, mockRegistry);
-      expect(objectResult.object.extracted).toBe("data");
+      expect(objectResult.data.object.extracted).toBe("data");
 
       // Test streaming
       const streamContext = createMockRouteContext({
