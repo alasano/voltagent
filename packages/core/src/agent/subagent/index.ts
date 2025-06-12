@@ -124,7 +124,7 @@ export class SubAgentManager {
       .join("\n");
 
     return `
-    You are a supervisor agent that coordinates between specialized agents:
+You are a supervisor agent that coordinates between specialized agents:
 
 <specialized_agents>
 ${subAgentList}
@@ -158,7 +158,7 @@ ${baseInstructions}
 <agents_memory>
 ${agentsMemory || "No previous agent interactions available."}
 </agents_memory>
-`;
+`.trim();
   }
 
   /**
