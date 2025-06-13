@@ -10,6 +10,7 @@ import {
   extractAgentIdFromUrl,
   isTestWebSocketUrl,
   type VoltRouteOptions,
+  type ServerOptions,
 } from "@voltagent/server-adapter";
 import { HonoServerAdapter } from "../adapters/hono";
 import { createWebSocketServer } from "./websocket";
@@ -28,11 +29,9 @@ const colors = {
 // Port and message configuration
 const preferredPorts = [3141, 4310, 1337, 4242];
 
-export interface HonoServerOptions extends VoltRouteOptions {
-  port?: number;
+export interface HonoServerOptions extends VoltRouteOptions, ServerOptions {
   hostname?: string;
   preferredPorts?: number[];
-  customEndpoints?: any[];
 }
 
 export interface ServerInfo {
@@ -194,6 +193,13 @@ export class HonoVoltServer {
 
   private addLandingPage(): void {
     this.app.get("/", (c) => {
+      const isProduction = process.env.NODE_ENV === "production";
+      const shouldEnableSwaggerUI = this.options.enableSwaggerUI ?? !isProduction;
+
+      const swaggerLink = shouldEnableSwaggerUI
+        ? '<a href="/ui" style="margin-right: 15px;">Swagger UI</a>'
+        : "";
+
       const html = `
         <!DOCTYPE html>
         <html lang="en">
@@ -228,7 +234,7 @@ export class HonoVoltServer {
                 <p>Manage and monitor your agents via the VoltOps Platform.</p>
                 <a href="https://console.voltagent.dev" target="_blank">Go to VoltOps Platform</a>
                 <div style="margin-top: 30px;">
-                  <a href="/ui" style="margin-right: 15px;">Swagger UI</a>
+                  ${swaggerLink}
                   <a href="/doc">OpenAPI Spec</a>
                 </div>
             </div>
@@ -251,12 +257,19 @@ export class HonoVoltServer {
       servers: [{ url: "http://localhost:3141", description: "Local development server" }],
     });
 
-    // Swagger UI
-    this.app.get("/ui", swaggerUI({ url: "/doc" }));
+    // Swagger UI - conditionally enable based on config
+    const isProduction = process.env.NODE_ENV === "production";
+    const shouldEnableSwaggerUI = this.options.enableSwaggerUI ?? !isProduction;
+
+    if (shouldEnableSwaggerUI) {
+      this.app.get("/ui", swaggerUI({ url: "/doc" }));
+    }
   }
 
   private printStartupMessage(port: number): void {
     const divider = `${colors.cyan}${"═".repeat(50)}${colors.reset}`;
+    const isProduction = process.env.NODE_ENV === "production";
+    const shouldEnableSwaggerUI = this.options.enableSwaggerUI ?? !isProduction;
 
     console.log("\n");
     console.log(divider);
@@ -264,12 +277,22 @@ export class HonoVoltServer {
       `${colors.bright}${colors.yellow}  VOLTAGENT SERVER STARTED SUCCESSFULLY${colors.reset}`,
     );
     console.log(divider);
+
+    // Show custom port message if user specified a port
+    if (this.options.port && port === this.options.port) {
+      console.log(`${colors.cyan}  ℹ ${colors.bright}Using custom port: ${port}${colors.reset}`);
+    }
+
     console.log(
       `${colors.green}  ✓ ${colors.bright}HTTP Server:  ${colors.reset}${colors.white}http://localhost:${port}${colors.reset}`,
     );
-    console.log(
-      `${colors.green}  ✓ ${colors.bright}Swagger UI:   ${colors.reset}${colors.white}http://localhost:${port}/ui${colors.reset}`,
-    );
+
+    if (shouldEnableSwaggerUI) {
+      console.log(
+        `${colors.green}  ✓ ${colors.bright}Swagger UI:   ${colors.reset}${colors.white}http://localhost:${port}/ui${colors.reset}`,
+      );
+    }
+
     console.log(
       `${colors.green}  ✓ ${colors.bright}WebSocket:    ${colors.reset}${colors.white}ws://localhost:${port}/ws${colors.reset}`,
     );

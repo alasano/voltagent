@@ -23,6 +23,7 @@ export {
 
 // Types
 export type {
+  ServerOptions,
   HttpMethod,
   RouteContext,
   RouteHandler,

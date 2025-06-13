@@ -1,5 +1,35 @@
 import type { AgentHistoryEntry } from "@voltagent/core";
 import type { z } from "zod";
+import type { CustomEndpointDefinition } from "./custom-endpoints";
+
+export type { CustomEndpointDefinition };
+
+/**
+ * Server configuration options for VoltAgent
+ */
+export interface ServerOptions {
+  /**
+   * Whether to automatically start the server
+   * @default true
+   */
+  autoStart?: boolean;
+  /**
+   * Port number for the server
+   * @default 3141 (or next available port)
+   */
+  port?: number;
+  /**
+   * Optional flag to enable/disable Swagger UI
+   * By default:
+   * - In development (NODE_ENV !== 'production'): Swagger UI is enabled
+   * - In production (NODE_ENV === 'production'): Swagger UI is disabled
+   */
+  enableSwaggerUI?: boolean;
+  /**
+   * Optional array of custom endpoint definitions to register with the API server
+   */
+  customEndpoints?: CustomEndpointDefinition[];
+}
 
 /**
  * HTTP methods supported by server adapters
@@ -98,16 +128,6 @@ export interface VoltRouteOptions {
   basePath?: string;
   enableWebSocket?: boolean;
   customEndpoints?: CustomEndpointDefinition[];
-}
-
-/**
- * Custom endpoint definition
- */
-export interface CustomEndpointDefinition {
-  path: string;
-  method: HttpMethod;
-  handler: RouteHandler;
-  description?: string;
 }
 
 /**

@@ -129,7 +129,8 @@ export async function _startLegacyHonoServer(options: any): Promise<void> {
   const allCustomEndpoints = [...(options.customEndpoints || []), ..._globalCustomEndpoints];
 
   const server = new HonoVoltServer(registry, {
-    port: options.port,
+    port: options.server?.port ?? options.port,
+    enableSwaggerUI: options.server?.enableSwaggerUI ?? options.enableSwaggerUI,
     customEndpoints: allCustomEndpoints.length > 0 ? allCustomEndpoints : undefined,
   });
 

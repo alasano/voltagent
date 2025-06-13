@@ -32,6 +32,7 @@ jest.mock("@hono/zod-openapi", () => {
     describe: jest.fn(() => mockZodSchema),
     base64: jest.fn(() => mockZodSchema),
     startsWith: jest.fn(() => mockZodSchema),
+    url: jest.fn(() => mockZodSchema),
     openapi: jest.fn(() => mockZodSchema),
   };
 
@@ -121,6 +122,7 @@ jest.mock("zod", () => {
     describe: jest.fn(() => mockZodSchema),
     base64: jest.fn(() => mockZodSchema),
     startsWith: jest.fn(() => mockZodSchema),
+    url: jest.fn(() => mockZodSchema),
   };
 
   const mockZodNumber: any = {

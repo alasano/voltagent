@@ -41,8 +41,17 @@ export * from "./voice";
 export * from "./telemetry/exporter";
 export type { UsageInfo } from "./agent/providers";
 
-// Minimal type definition for legacy API compatibility only
-// This is NOT imported by server packages - they have their own definitions
+// Minimal type definitions for legacy API compatibility only
+// These are NOT imported by server packages - they have their own definitions
+
+// Local ServerOptions type for VoltAgentOptions
+interface ServerOptions {
+  autoStart?: boolean;
+  port?: number;
+  enableSwaggerUI?: boolean;
+  customEndpoints?: LegacyCustomEndpointDefinition[];
+}
+
 interface LegacyCustomEndpointDefinition {
   path: string;
   method: "get" | "post" | "put" | "patch" | "delete" | "options" | "head";
@@ -70,15 +79,31 @@ export { globalCustomEndpoints as _globalCustomEndpoints };
 // It includes types that will be dynamically imported.
 type VoltAgentOptions = {
   agents: Record<string, Agent<any>>;
+  /**
+   * Server configuration options
+   */
+  server?: ServerOptions;
+  /**
+   * @deprecated Use `server.port` instead
+   */
   port?: number;
+  /**
+   * @deprecated Use `server.autoStart` instead
+   */
   autoStart?: boolean;
   checkDependencies?: boolean;
+  /**
+   * @deprecated Use `server.customEndpoints` instead
+   */
   customEndpoints?: LegacyCustomEndpointDefinition[];
+  /**
+   * @deprecated Use `server.enableSwaggerUI` instead
+   */
+  enableSwaggerUI?: boolean;
   telemetryExporter?: (SpanExporter | VoltAgentExporter) | (SpanExporter | VoltAgentExporter)[];
   serverMode?: "auto" | "manual" | "disabled";
   registry?: LocalAgentRegistry; // Legacy option, now handled by server packages.
 };
-
 /**
  * @deprecated The VoltAgent class is deprecated and will be removed in v2.0. Please use the new `createVoltServer` function from `@voltagent/server` or your chosen server adapter.
  */
@@ -86,12 +111,22 @@ export class VoltAgent {
   private serverMode: "auto" | "manual" | "disabled";
   private registry: LocalAgentRegistry;
   private _isLegacyMode: boolean;
+  private serverOptions: ServerOptions = {};
 
   constructor(options: VoltAgentOptions) {
     this.serverMode = options.serverMode ?? "auto";
     // The concept of a singleton registry is gone. In legacy mode, we just create a local one.
     this.registry = options.registry || new LocalAgentRegistry();
     this._isLegacyMode = this.serverMode === "auto";
+
+    // Merge server options with backward compatibility
+    // New server object takes precedence over deprecated individual options
+    this.serverOptions = {
+      autoStart: options.server?.autoStart ?? options.autoStart ?? true,
+      port: options.server?.port ?? options.port,
+      enableSwaggerUI: options.server?.enableSwaggerUI ?? options.enableSwaggerUI,
+      customEndpoints: options.server?.customEndpoints ?? options.customEndpoints ?? [],
+    };
 
     // Register agents if provided
     if (options.agents) {
@@ -100,7 +135,7 @@ export class VoltAgent {
       });
     }
 
-    if (this.serverMode === "auto" && options.autoStart !== false) {
+    if (this.serverMode === "auto" && this.serverOptions.autoStart !== false) {
       devLogger.warn(
         "[DEPRECATION] Automatic server startup via 'new VoltAgent()' is deprecated and will be removed in v2.0. Please migrate to the new 'createVoltServer' API from '@voltagent/server'.",
       );
@@ -126,9 +161,30 @@ export class VoltAgent {
           "To use the automatic server, you must install the default server: 'npm install @voltagent/server'",
         );
       }
-      throw error;
     }
   }
+
+  /**
+   * Register an agent
+   */
+  public registerAgent(agent: Agent<any>): void {
+    // Register the main agent
+    this.registry.registerAgent(agent);
+
+    // Also register all subagents recursively
+    const subAgents = agent.getSubAgents();
+    if (subAgents && subAgents.length > 0) {
+      subAgents.forEach((subAgent) => this.registerAgent(subAgent));
+    }
+  }
+
+  /**
+   * Register multiple agents
+   */
+  public registerAgents(agents: Record<string, Agent<any>>): void {
+    Object.values(agents).forEach((agent) => this.registerAgent(agent));
+  }
+
   public getServerMode(): "auto" | "manual" | "disabled" {
     return this.serverMode;
   }
