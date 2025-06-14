@@ -39,7 +39,7 @@ export * from "./utils/update";
 export { createAsyncIterableStream, type AsyncIterableStream } from "./utils/async-iterable-stream";
 export * from "./voice";
 export * from "./telemetry/exporter";
-export type { UsageInfo } from "./agent/providers";
+export type { UsageInfo, StreamPart } from "./agent/providers";
 
 // Minimal type definitions for legacy API compatibility only
 // These are NOT imported by server packages - they have their own definitions

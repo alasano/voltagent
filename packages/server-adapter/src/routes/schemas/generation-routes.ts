@@ -152,9 +152,44 @@ const StreamEventSchema = z.object({
   text: z.string().optional(),
   object: z.any().optional(),
   timestamp: z.string(),
-  type: z.enum(["text", "object", "completion", "error"]),
+  type: z.enum([
+    "text",
+    "object",
+    "completion",
+    "error",
+    "reasoning",
+    "source",
+    "tool-call",
+    "tool-result",
+    "finish",
+  ]),
   done: z.boolean().optional(),
   error: z.string().optional(),
+  reasoning: z.string().optional(),
+  source: z.string().optional(),
+  toolCall: z
+    .object({
+      toolCallId: z.string(),
+      toolName: z.string(),
+      args: z.any(),
+    })
+    .optional(),
+  toolResult: z
+    .object({
+      toolCallId: z.string(),
+      toolName: z.string(),
+      result: z.any(),
+    })
+    .optional(),
+  finishReason: z.string().optional(),
+  usage: z
+    .object({
+      promptTokens: z.number(),
+      completionTokens: z.number(),
+      totalTokens: z.number(),
+    })
+    .optional(),
+  code: z.string().optional(),
 });
 
 /**
@@ -203,7 +238,14 @@ export const streamTextRoute: RouteDefinition = {
     }
 
     const { input, options = {} } = context.body || {};
-    return await agent.streamText(input, options);
+
+    // Pass the streamEventForwarder from context if available
+    const streamOptions = {
+      ...options,
+      ...(context.streamEventForwarder && { streamEventForwarder: context.streamEventForwarder }),
+    };
+
+    return await agent.streamText(input, streamOptions);
   },
 };
 

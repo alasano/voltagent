@@ -129,49 +129,260 @@ export class HonoServerAdapter extends ServerAdapter {
             ? await c.req.json().catch(() => undefined)
             : undefined;
 
-        const context = {
-          params,
-          query,
-          body,
-          headers: this.extractHeaders(c),
-          context: c,
-        };
-
-        const streamResult = await route.handler(params, context);
+        // Extract headers outside of the stream to preserve 'this' context
+        const headers = this.extractHeaders(c);
 
         // Create SSE stream
         const stream = new ReadableStream({
           async start(controller) {
-            const encoder = new TextEncoder();
-
-            const send = (data: any) => {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-            };
-
             try {
-              if (streamResult?.textStream) {
-                for await (const chunk of streamResult.textStream) {
-                  send({ text: chunk, type: "text", timestamp: new Date().toISOString() });
-                }
-              } else if (streamResult?.objectStream) {
-                const reader = streamResult.objectStream.getReader();
-                while (true) {
-                  const { done, value } = await reader.read();
-                  if (done) break;
-                  send({ object: value, type: "object", timestamp: new Date().toISOString() });
-                }
-                reader.releaseLock();
-              }
+              // Create a flag to track if stream has been closed
+              let streamClosed = false;
 
-              send({ done: true, type: "completion", timestamp: new Date().toISOString() });
-              controller.close();
+              // Helper function to safely enqueue data
+              const safeEnqueue = (data: string) => {
+                if (!streamClosed) {
+                  try {
+                    controller.enqueue(new TextEncoder().encode(data));
+                  } catch (e) {
+                    console.error("Failed to enqueue data:", e);
+                    streamClosed = true;
+                  }
+                }
+              };
+
+              // Helper function to safely close stream
+              const safeClose = () => {
+                if (!streamClosed) {
+                  try {
+                    controller.close();
+                    streamClosed = true;
+                  } catch (e) {
+                    console.error("Failed to close controller:", e);
+                  }
+                }
+              };
+
+              // Create a real-time SubAgent event forwarder
+              const subAgentEventQueue: any[] = [];
+              let isProcessingQueue = false;
+
+              const processEventQueue = async () => {
+                if (isProcessingQueue || subAgentEventQueue.length === 0) return;
+                isProcessingQueue = true;
+
+                while (subAgentEventQueue.length > 0 && !streamClosed) {
+                  const event = subAgentEventQueue.shift();
+                  if (event) {
+                    const sseMessage = `data: ${JSON.stringify(event)}\n\n`;
+                    safeEnqueue(sseMessage);
+                  }
+                }
+
+                isProcessingQueue = false;
+              };
+
+              const streamEventForwarder = async (event: any) => {
+                if (!streamClosed) {
+                  subAgentEventQueue.push(event);
+                  // Process queue asynchronously to avoid blocking SubAgent execution
+                  setImmediate(processEventQueue);
+                }
+              };
+
+              const context = {
+                params,
+                query,
+                body,
+                headers,
+                context: c,
+                streamEventForwarder, // Pass the real-time forwarder
+              };
+
+              const streamResult = await route.handler(params, context);
+
+              // Iterate through the full stream if available, otherwise fallback to text stream
+              try {
+                if (streamResult?.fullStream) {
+                  // Use fullStream for rich events (text, tool calls, reasoning, etc.)
+                  for await (const part of streamResult.fullStream) {
+                    if (streamClosed) break;
+
+                    switch (part.type) {
+                      case "text-delta": {
+                        const data = {
+                          text: part.textDelta,
+                          timestamp: new Date().toISOString(),
+                          type: "text",
+                        };
+                        const sseMessage = `data: ${JSON.stringify(data)}\n\n`;
+                        safeEnqueue(sseMessage);
+                        break;
+                      }
+                      case "reasoning": {
+                        const data = {
+                          reasoning: part.reasoning,
+                          timestamp: new Date().toISOString(),
+                          type: "reasoning",
+                        };
+                        const sseMessage = `data: ${JSON.stringify(data)}\n\n`;
+                        safeEnqueue(sseMessage);
+                        break;
+                      }
+                      case "source": {
+                        const data = {
+                          source: part.source,
+                          timestamp: new Date().toISOString(),
+                          type: "source",
+                        };
+                        const sseMessage = `data: ${JSON.stringify(data)}\n\n`;
+                        safeEnqueue(sseMessage);
+                        break;
+                      }
+                      case "tool-call": {
+                        const data = {
+                          toolCall: {
+                            toolCallId: part.toolCallId,
+                            toolName: part.toolName,
+                            args: part.args,
+                          },
+                          timestamp: new Date().toISOString(),
+                          type: "tool-call",
+                        };
+                        const sseMessage = `data: ${JSON.stringify(data)}\n\n`;
+                        safeEnqueue(sseMessage);
+                        break;
+                      }
+                      case "tool-result": {
+                        // Send appropriate event type based on error status
+                        const data = {
+                          toolResult: {
+                            toolCallId: part.toolCallId,
+                            toolName: part.toolName,
+                            result: part.result,
+                          },
+                          timestamp: new Date().toISOString(),
+                          type: "tool-result",
+                        };
+                        const sseMessage = `data: ${JSON.stringify(data)}\n\n`;
+                        safeEnqueue(sseMessage);
+
+                        // Don't close stream for tool errors - continue processing
+                        // Note: SubAgent events are now forwarded in real-time via streamEventForwarder
+                        // No need to parse delegate_task results for batch forwarding
+                        break;
+                      }
+                      case "finish": {
+                        const data = {
+                          finishReason: part.finishReason,
+                          usage: part.usage,
+                          timestamp: new Date().toISOString(),
+                          type: "finish",
+                        };
+                        const sseMessage = `data: ${JSON.stringify(data)}\n\n`;
+                        safeEnqueue(sseMessage);
+                        break;
+                      }
+                      case "error": {
+                        // Check if this is a tool error
+                        const error = part.error as any;
+                        const isToolError = error?.constructor?.name === "ToolExecutionError";
+
+                        const errorData = {
+                          error: (part.error as Error)?.message || "Stream error occurred",
+                          timestamp: new Date().toISOString(),
+                          type: "error",
+                          code: isToolError ? "TOOL_ERROR" : "STREAM_ERROR",
+                          // Include tool details if available
+                          ...(isToolError && {
+                            toolName: error?.toolName,
+                            toolCallId: error?.toolCallId,
+                          }),
+                        };
+
+                        const errorMessage = `data: ${JSON.stringify(errorData)}\n\n`;
+                        safeEnqueue(errorMessage);
+
+                        // Don't close stream for tool errors
+                        if (!isToolError) {
+                          safeClose();
+                          return;
+                        }
+                        break;
+                      }
+                    }
+                  }
+                } else if (streamResult?.textStream) {
+                  // Fallback to textStream for providers that don't support fullStream
+                  for await (const textDelta of streamResult.textStream) {
+                    if (streamClosed) break;
+
+                    const data = {
+                      text: textDelta,
+                      timestamp: new Date().toISOString(),
+                      type: "text",
+                    };
+                    const sseMessage = `data: ${JSON.stringify(data)}\n\n`;
+                    safeEnqueue(sseMessage);
+                  }
+                } else if (streamResult?.objectStream) {
+                  for await (const chunk of streamResult.objectStream) {
+                    if (streamClosed) break;
+
+                    const data = {
+                      object: chunk,
+                      timestamp: new Date().toISOString(),
+                      type: "object",
+                    };
+                    const sseMessage = `data: ${JSON.stringify(data)}\n\n`;
+                    safeEnqueue(sseMessage);
+                  }
+                }
+
+                // Send completion message if stream completed successfully
+                if (!streamClosed) {
+                  const completionData = {
+                    done: true,
+                    timestamp: new Date().toISOString(),
+                    type: "completion",
+                  };
+                  const completionMessage = `data: ${JSON.stringify(completionData)}\n\n`;
+                  safeEnqueue(completionMessage);
+                  safeClose();
+                }
+              } catch (iterationError) {
+                // Handle errors during stream iteration
+                console.error("Error during stream iteration:", iterationError);
+                const errorData = {
+                  error: (iterationError as Error)?.message ?? "Stream iteration failed",
+                  timestamp: new Date().toISOString(),
+                  type: "error",
+                  code: "ITERATION_ERROR",
+                };
+                const errorMessage = `data: ${JSON.stringify(errorData)}\n\n`;
+                safeEnqueue(errorMessage);
+                safeClose();
+              }
             } catch (error) {
-              send({
-                error: error instanceof Error ? error.message : "Streaming failed",
-                type: "error",
+              // Handle errors during initial setup
+              console.error("Error during stream setup:", error);
+              const errorData = {
+                error: error instanceof Error ? error.message : "Stream setup failed",
                 timestamp: new Date().toISOString(),
-              });
-              controller.close();
+                type: "error",
+                code: "SETUP_ERROR",
+              };
+              const errorMessage = `data: ${JSON.stringify(errorData)}\n\n`;
+              try {
+                controller.enqueue(new TextEncoder().encode(errorMessage));
+              } catch (e) {
+                console.error("Failed to send error message:", e);
+              }
+              try {
+                controller.close();
+              } catch (e) {
+                console.error("Failed to close controller after error:", e);
+              }
             }
           },
         });

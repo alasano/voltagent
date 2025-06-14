@@ -441,19 +441,20 @@ describe("HonoServerAdapter", () => {
 
       await registeredHandler(mockContext);
 
-      expect(mockContext.json).toHaveBeenCalledWith(
-        {
-          success: false,
-          error: "Stream error",
-        },
-        500,
+      // With fullStream, errors inside the stream are handled as SSE events
+      expect(mockContext.body).toHaveBeenCalledWith(
+        expect.any(ReadableStream),
+        expect.objectContaining({
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+          },
+        }),
       );
 
-      // Verify error was logged
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error in streaming route POST /stream:",
-        expect.any(Error),
-      );
+      // Verify error was logged as stream setup error since handler is called during setup
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error during stream setup:", expect.any(Error));
 
       consoleErrorSpy.mockRestore();
     });
@@ -719,6 +720,9 @@ describe("HonoServerAdapter", () => {
 
   describe("streaming route error handling", () => {
     it("should handle stream creation errors", async () => {
+      // Suppress expected error logging for this test
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
       const mockCtx = createMockHonoContext();
 
       const streamingRoute = {
@@ -734,13 +738,22 @@ describe("HonoServerAdapter", () => {
 
       await registeredHandler(mockCtx);
 
-      expect(mockCtx.json).toHaveBeenCalledWith(
-        {
-          success: false,
-          error: "Stream creation failed",
-        },
-        500,
+      // With fullStream, even sync errors inside the stream handler are handled as SSE events
+      expect(mockCtx.body).toHaveBeenCalledWith(
+        expect.any(ReadableStream),
+        expect.objectContaining({
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+          },
+        }),
       );
+
+      // Verify error was logged as stream setup error
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error during stream setup:", expect.any(Error));
+
+      consoleErrorSpy.mockRestore();
     });
 
     it("should handle stream errors during data flow", async () => {

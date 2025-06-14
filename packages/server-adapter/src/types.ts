@@ -45,6 +45,7 @@ export interface RouteContext {
   body?: any;
   headers?: Record<string, string>;
   user?: any;
+  streamEventForwarder?: (event: any) => Promise<void>;
   [key: string]: any;
 }
 
