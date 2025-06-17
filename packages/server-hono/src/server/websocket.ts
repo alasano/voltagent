@@ -10,8 +10,13 @@ const agentConnections = new Map<string, Set<WebSocket>>();
 /**
  * Create WebSocket server for real-time agent communication
  */
-export function createWebSocketServer(registry: LocalAgentRegistry): WebSocketServer {
-  const wss = new WebSocketServer({ noServer: true });
+export function createWebSocketServer(
+  registry: LocalAgentRegistry,
+  webSocketServerFactory?: () => WebSocketServer,
+): WebSocketServer {
+  const wss = webSocketServerFactory
+    ? webSocketServerFactory()
+    : new WebSocketServer({ noServer: true });
 
   // Subscribe to agent events for real-time updates
   setupEventSubscriptions(registry);
