@@ -1,6 +1,5 @@
 import {
-  Agent,
-  type AgentOptions,
+  type Agent,
   LocalAgentRegistry,
   type VoltAgentExporter,
   checkForUpdates,
@@ -21,12 +20,8 @@ export { HonoServerAdapter } from "./adapters/hono";
 // WebSocket utilities
 export { createWebSocketServer, broadcastToAgent, broadcastToAll } from "./server/websocket";
 
-// A more robust AgentDefinition that handles the generic provider type.
-type AgentDefinition<TProvider extends { llm: any }> = Omit<AgentOptions, "registry"> &
-  TProvider & { model: any };
-
 interface CreateServerOptions {
-  agents: AgentDefinition<any>[];
+  agents: Record<string, Agent<any>>;
   port?: number;
   customEndpoints?: CustomEndpointDefinition[];
   telemetryExporter?: VoltAgentExporter | (SpanExporter | VoltAgentExporter)[];
@@ -54,30 +49,29 @@ export function createVoltServer(options: CreateServerOptions) {
 
   const registry = new LocalAgentRegistry();
 
-  const agentInstances = options.agents.map((agentDef) => {
-    const agent = new Agent({
-      ...agentDef,
-      registry: registry,
-    });
-
-    if (
-      options.telemetryExporter &&
-      typeof (agent as any)._INTERNAL_setVoltAgentExporter === "function"
-    ) {
-      const voltExporter = Array.isArray(options.telemetryExporter)
-        ? options.telemetryExporter.find(
-            (exp): exp is VoltAgentExporter =>
-              typeof (exp as VoltAgentExporter).exportHistoryEntry === "function",
-          )
-        : (options.telemetryExporter as VoltAgentExporter);
-      if (voltExporter) {
-        (agent as any)._INTERNAL_setVoltAgentExporter(voltExporter);
-      }
-    }
-    return agent;
+  // Inject shared registry into provided agent instances (like legacy function does)
+  Object.values(options.agents).forEach((agentInstance) => {
+    (agentInstance as any).registry = registry;
+    registry.registerAgent(agentInstance);
   });
 
-  agentInstances.forEach((instance) => registry.registerAgent(instance));
+  // Handle telemetry for pre-instantiated agents
+  if (options.telemetryExporter) {
+    const voltExporter = Array.isArray(options.telemetryExporter)
+      ? options.telemetryExporter.find(
+          (exp): exp is VoltAgentExporter =>
+            typeof (exp as VoltAgentExporter).exportHistoryEntry === "function",
+        )
+      : (options.telemetryExporter as VoltAgentExporter);
+
+    if (voltExporter) {
+      Object.values(options.agents).forEach((agent) => {
+        if (typeof (agent as any)._INTERNAL_setVoltAgentExporter === "function") {
+          (agent as any)._INTERNAL_setVoltAgentExporter(voltExporter);
+        }
+      });
+    }
+  }
 
   const server = new HonoVoltServer(registry, {
     port: options.port,

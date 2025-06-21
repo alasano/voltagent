@@ -83,26 +83,30 @@ describe("Server-Hono Exports", () => {
 
   describe("createVoltServer", () => {
     it("should create server with provided agents", () => {
-      const agentDef1 = { name: "Agent 1", instructions: "Test", llm: "mock", model: "gpt-4" };
-      const agentDef2 = { name: "Agent 2", instructions: "Test", llm: "mock", model: "gpt-4" };
+      const { Agent, LocalAgentRegistry } = require("@voltagent/core");
+
+      const mockAgent1 = new Agent({
+        name: "Agent 1",
+        instructions: "Test",
+        llm: "mock",
+        model: "gpt-4",
+      });
+      const mockAgent2 = new Agent({
+        name: "Agent 2",
+        instructions: "Test",
+        llm: "mock",
+        model: "gpt-4",
+      });
 
       const result = serverExports.createVoltServer({
-        agents: [agentDef1, agentDef2],
+        agents: { agent1: mockAgent1, agent2: mockAgent2 },
         port: 4000,
       });
 
-      const { Agent, LocalAgentRegistry } = require("@voltagent/core");
-
-      expect(Agent).toHaveBeenCalledTimes(2);
-      expect(Agent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ...agentDef1,
-          registry: expect.any(Object),
-        }),
-      );
-
       const mockRegistry = LocalAgentRegistry.mock.results[0].value;
       expect(mockRegistry.registerAgent).toHaveBeenCalledTimes(2);
+      expect(mockRegistry.registerAgent).toHaveBeenCalledWith(mockAgent1);
+      expect(mockRegistry.registerAgent).toHaveBeenCalledWith(mockAgent2);
       expect(serverExports.HonoVoltServer).toHaveBeenCalledWith(
         mockRegistry,
         expect.objectContaining({ port: 4000 }),
@@ -126,20 +130,22 @@ describe("Server-Hono Exports", () => {
         updateHistoryEntry: jest.fn(),
       };
 
-      const agentDef = { name: "Agent 1", instructions: "Test", llm: "mock", model: "gpt-4" };
+      const { Agent } = require("@voltagent/core");
+      const mockAgent = new Agent({
+        name: "Agent 1",
+        instructions: "Test",
+        llm: "mock",
+        model: "gpt-4",
+      });
+      mockAgent._INTERNAL_setVoltAgentExporter = jest.fn();
 
       serverExports.createVoltServer({
-        agents: [agentDef],
+        agents: { agent: mockAgent },
         telemetryExporter: mockExporter as any,
       });
 
-      const { Agent } = require("@voltagent/core");
-      const createdAgent = Agent.mock.results[0].value;
-
       // Should attempt to set exporter if internal method exists
-      if (createdAgent._INTERNAL_setVoltAgentExporter) {
-        expect(createdAgent._INTERNAL_setVoltAgentExporter).toHaveBeenCalledWith(mockExporter);
-      }
+      expect(mockAgent._INTERNAL_setVoltAgentExporter).toHaveBeenCalledWith(mockExporter);
     });
 
     it("should handle array of exporters", () => {
@@ -156,16 +162,22 @@ describe("Server-Hono Exports", () => {
         updateHistoryEntry: jest.fn(),
       };
 
-      const agentDef = { name: "Agent 1", instructions: "Test", llm: "mock", model: "gpt-4" };
-
       // Clear previous mock calls
       const { NodeTracerProvider } = require("@opentelemetry/sdk-trace-node");
       const { BatchSpanProcessor } = require("@opentelemetry/sdk-trace-base");
+      const { Agent } = require("@voltagent/core");
       NodeTracerProvider.mockClear();
       BatchSpanProcessor.mockClear();
 
+      const mockAgent = new Agent({
+        name: "Agent 1",
+        instructions: "Test",
+        llm: "mock",
+        model: "gpt-4",
+      });
+
       serverExports.createVoltServer({
-        agents: [agentDef],
+        agents: { agent: mockAgent },
         telemetryExporter: [mockSpanExporter, mockVoltExporter] as any,
       });
 
@@ -177,7 +189,7 @@ describe("Server-Hono Exports", () => {
       const { checkForUpdates } = require("@voltagent/core");
 
       serverExports.createVoltServer({
-        agents: [],
+        agents: {},
         checkDependencies: false,
       });
 
@@ -188,7 +200,7 @@ describe("Server-Hono Exports", () => {
       const { checkForUpdates } = require("@voltagent/core");
 
       serverExports.createVoltServer({
-        agents: [],
+        agents: {},
       });
 
       expect(checkForUpdates).toHaveBeenCalledWith(undefined, { filter: "@voltagent" });
@@ -196,7 +208,7 @@ describe("Server-Hono Exports", () => {
 
     it("should pass through all options", () => {
       const customOptions = {
-        agents: [],
+        agents: {},
         port: 5000,
         customEndpoints: [{ path: "/test", method: "get" as const, handler: jest.fn() }],
       };
@@ -213,10 +225,16 @@ describe("Server-Hono Exports", () => {
     });
 
     it("should handle agents without telemetry exporter", () => {
-      const agentDef = { name: "Agent 1", instructions: "Test", llm: "mock", model: "gpt-4" };
+      const { Agent } = require("@voltagent/core");
+      const mockAgent = new Agent({
+        name: "Agent 1",
+        instructions: "Test",
+        llm: "mock",
+        model: "gpt-4",
+      });
 
       const result = serverExports.createVoltServer({
-        agents: [agentDef],
+        agents: { agent: mockAgent },
       });
 
       expect(result).toHaveProperty("start");
@@ -234,20 +252,19 @@ describe("Server-Hono Exports", () => {
         exportHistorySteps: jest.fn(),
         updateHistoryEntry: jest.fn(),
       };
-      const agentDef = { name: "Agent 1", instructions: "Test", llm: "mock", model: "gpt-4" };
-
       // Mock agent without _INTERNAL_setVoltAgentExporter method
       const { Agent } = require("@voltagent/core");
-      Agent.mockImplementationOnce((opts: any) => ({
-        id: opts.id || `agent-${Date.now()}`,
-        name: opts.name || "Test Agent",
-        ...opts,
-        // No _INTERNAL_setVoltAgentExporter method
-      }));
+      const mockAgent = new Agent({
+        name: "Agent 1",
+        instructions: "Test",
+        llm: "mock",
+        model: "gpt-4",
+      });
+      // Don't add _INTERNAL_setVoltAgentExporter method to simulate agents that don't support it
 
       expect(() => {
         serverExports.createVoltServer({
-          agents: [agentDef],
+          agents: { agent: mockAgent },
           telemetryExporter: mockExporter as any,
         });
       }).not.toThrow();
@@ -275,33 +292,26 @@ describe("Server-Hono Exports", () => {
         shutdown: jest.fn().mockResolvedValue(undefined),
       };
 
-      const agentDef = {
+      const { Agent } = require("@voltagent/core");
+      const mockAgent = new Agent({
         name: "Agent 1",
         instructions: "Test",
         llm: "mock",
         model: "gpt-4",
-      };
-
-      const { Agent } = require("@voltagent/core");
-      Agent.mockImplementationOnce((opts: any) => ({
-        id: opts.id || `agent-${Date.now()}`,
-        name: opts.name || "Test Agent",
-        _INTERNAL_setVoltAgentExporter: jest.fn(),
-        ...opts,
-      }));
+      });
+      mockAgent._INTERNAL_setVoltAgentExporter = jest.fn();
 
       serverExports.createVoltServer({
-        agents: [agentDef],
+        agents: { agent: mockAgent },
         telemetryExporter: [mockSpanExporter, mockVoltExporter1, mockVoltExporter2] as any,
       });
 
-      const createdAgent = Agent.mock.results[0].value;
-      expect(createdAgent._INTERNAL_setVoltAgentExporter).toHaveBeenCalledWith(mockVoltExporter1);
+      expect(mockAgent._INTERNAL_setVoltAgentExporter).toHaveBeenCalledWith(mockVoltExporter1);
     });
 
     it("should handle empty agents array", () => {
       const result = serverExports.createVoltServer({
-        agents: [],
+        agents: {},
       });
 
       expect(result).toHaveProperty("start");
@@ -318,7 +328,7 @@ describe("Server-Hono Exports", () => {
       });
 
       serverExports.createVoltServer({
-        agents: [],
+        agents: {},
       });
 
       // Wait for async check
@@ -332,7 +342,7 @@ describe("Server-Hono Exports", () => {
       checkForUpdates.mockRejectedValueOnce(new Error("Check failed"));
 
       serverExports.createVoltServer({
-        agents: [],
+        agents: {},
       });
 
       // Wait for async check
@@ -342,6 +352,45 @@ describe("Server-Hono Exports", () => {
         "Error checking for updates:",
         expect.any(Error),
       );
+    });
+
+    it("should support agents with subagents", () => {
+      const { Agent } = require("@voltagent/core");
+      const subAgent = new Agent({
+        name: "Sub Agent",
+        instructions: "I am a subagent",
+        llm: "mock",
+        model: "gpt-4",
+      });
+      subAgent.getSubAgents = jest.fn().mockReturnValue([]);
+
+      const supervisorAgent = new Agent({
+        name: "Supervisor",
+        instructions: "I manage other agents",
+        llm: "mock",
+        model: "gpt-4",
+        subAgents: [subAgent],
+      });
+      supervisorAgent.getSubAgents = jest.fn().mockReturnValue([subAgent]);
+
+      const result = serverExports.createVoltServer({
+        agents: { supervisor: supervisorAgent },
+        port: 4000,
+      });
+
+      const { LocalAgentRegistry } = require("@voltagent/core");
+      const mockRegistry = LocalAgentRegistry.mock.results[0].value;
+
+      // Verify supervisor is registered
+      expect(mockRegistry.registerAgent).toHaveBeenCalledWith(supervisorAgent);
+
+      // Verify subagent relationship works
+      expect(supervisorAgent.getSubAgents()).toContain(subAgent);
+
+      expect(result).toHaveProperty("start");
+      expect(result).toHaveProperty("stop");
+      expect(result).toHaveProperty("getInstance");
+      expect(result).toHaveProperty("registry");
     });
   });
 
@@ -560,13 +609,13 @@ describe("Server-Hono Exports", () => {
 
       // First initialization
       serverExports.createVoltServer({
-        agents: [],
+        agents: {},
         telemetryExporter: mockExporter as any,
       });
 
       // Second initialization should work
       serverExports.createVoltServer({
-        agents: [],
+        agents: {},
         telemetryExporter: mockExporter as any,
       });
 
@@ -586,7 +635,7 @@ describe("Server-Hono Exports", () => {
       const mockInvalidExporter = { someOtherMethod: jest.fn() } as any;
 
       serverExports.createVoltServer({
-        agents: [],
+        agents: {},
         telemetryExporter: [mockVoltExporter, mockInvalidExporter] as any,
       });
 
@@ -606,7 +655,7 @@ describe("Server-Hono Exports", () => {
       };
 
       serverExports.createVoltServer({
-        agents: [],
+        agents: {},
         telemetryExporter: [mockSpanExporter1, mockSpanExporter2] as any,
       });
 
