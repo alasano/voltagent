@@ -3,14 +3,13 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { swaggerUI } from "@hono/swagger-ui";
 import type { WebSocketServer } from "ws";
 import type { LocalAgentRegistry } from "@voltagent/core";
-import { AgentEventEmitter } from "@voltagent/core";
 import {
-  ServerAdapter,
   createVoltRoutes,
   extractAgentIdFromUrl,
   isTestWebSocketUrl,
   type VoltRouteOptions,
 } from "@voltagent/server-adapter";
+import type { VoltRouteFactory } from "@voltagent/server-adapter";
 import { HonoServerAdapter } from "../adapters/hono";
 import { createWebSocketServer } from "./websocket";
 
@@ -44,11 +43,27 @@ export interface ServerInfo {
 
 /**
  * Hono-based VoltAgent server implementation
+ *
+ * Usage example:
+ * ```typescript
+ * const server = new HonoVoltServer(registry, options);
+ *
+ * // Setup without starting (WebSocket server is created but not bound)
+ * server.setup();
+ *
+ * // Access WebSocket server for custom logic
+ * const wsServer = server.getWebSocketServer();
+ *
+ * // Start the server when ready
+ * await server.start();
+ * ```
  */
 export class HonoVoltServer {
-  private app: OpenAPIHono;
+  public app: OpenAPIHono;
   private adapter: HonoServerAdapter;
   private serverInfo?: ServerInfo;
+  private routes: VoltRouteFactory | undefined;
+  private wsServer?: WebSocketServer;
 
   constructor(
     private registry: LocalAgentRegistry,
@@ -56,6 +71,40 @@ export class HonoVoltServer {
   ) {
     this.app = new OpenAPIHono();
     this.adapter = new HonoServerAdapter(this.app);
+  }
+
+  /**
+   * Setup the server
+   */
+  setup() {
+    // Set up routes using the comprehensive server-adapter
+    this.routes = createVoltRoutes(this.registry, {
+      basePath: this.options.basePath || "",
+      enableWebSocket: this.options.enableWebSocket,
+      customEndpoints: this.options.customEndpoints,
+    });
+
+    this.routes.attachTo(this.adapter);
+
+    // Setup WebSocket server (without binding to port)
+    this.setupWebSocket();
+
+    // Add landing page
+    this.addLandingPage();
+
+    // Add OpenAPI documentation
+    this.addDocumentation();
+  }
+
+  /**
+   * Setup WebSocket server without binding to port
+   */
+  private setupWebSocket(): void {
+    // Create WebSocket server with LocalAgentRegistry integration
+    const ws = createWebSocketServer(this.registry);
+
+    // Store the WebSocket server for later use
+    this.wsServer = ws;
   }
 
   /**
@@ -67,23 +116,13 @@ export class HonoVoltServer {
       return this.serverInfo;
     }
 
-    // Set up routes using the comprehensive server-adapter
-    const routes = createVoltRoutes(this.registry, {
-      basePath: this.options.basePath || "",
-      enableWebSocket: this.options.enableWebSocket,
-      customEndpoints: this.options.customEndpoints,
-    });
+    this.setup();
 
-    routes.attachTo(this.adapter);
-
-    // Add landing page
-    this.addLandingPage();
-
-    // Add OpenAPI documentation
-    this.addDocumentation();
-
-    // Create WebSocket server with LocalAgentRegistry integration
-    const ws = createWebSocketServer(this.registry);
+    // Use the WebSocket server created during setup
+    if (!this.wsServer) {
+      throw new Error("WebSocket server not initialized");
+    }
+    const ws = this.wsServer;
 
     // Try to start server on available port
     const port = await this.findAvailablePort();
@@ -99,16 +138,20 @@ export class HonoVoltServer {
 
       if (url.startsWith("/ws")) {
         ws.handleUpgrade(req, socket, head, (websocket) => {
+          if (!this.routes) {
+            throw new Error("Routes not initialized");
+          }
+
           // Use server-adapter utilities for proper routing
           if (isTestWebSocketUrl(url)) {
             // Handle test connection
-            const wsManager = routes.getWebSocketManager();
+            const wsManager = this.routes.getWebSocketManager();
             wsManager.handleTestConnection(websocket);
           } else {
             // Handle agent-specific connection
             const agentId = extractAgentIdFromUrl(url);
             if (agentId) {
-              const wsManager = routes.getWebSocketManager();
+              const wsManager = this.routes.getWebSocketManager();
               wsManager.addConnection(agentId, websocket);
 
               // Send initial state
@@ -158,6 +201,12 @@ export class HonoVoltServer {
       // In practice, you'd need to handle this based on your deployment
       this.serverInfo = undefined;
     }
+
+    // Also close the WebSocket server created during setup
+    if (this.wsServer) {
+      this.wsServer.close();
+      this.wsServer = undefined;
+    }
   }
 
   /**
@@ -165,6 +214,13 @@ export class HonoVoltServer {
    */
   getServerInfo(): ServerInfo | undefined {
     return this.serverInfo;
+  }
+
+  /**
+   * Get WebSocket server (available after setup)
+   */
+  getWebSocketServer(): WebSocketServer | undefined {
+    return this.wsServer;
   }
 
   private async findAvailablePort(): Promise<number> {
@@ -181,11 +237,10 @@ export class HonoVoltServer {
       try {
         // Simple port check - in practice you might want a more robust check
         return port;
-      } catch (error) {
+      } catch {
         if (port === portsToTry[portsToTry.length - 1]) {
           throw new Error("Could not find an available port");
         }
-        continue;
       }
     }
 
