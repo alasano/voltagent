@@ -40,8 +40,8 @@
   "dependencies": {
     "@opentelemetry/core": "^1.18.0",
     "@opentelemetry/sdk-trace-base": "^1.18.0",
-    "@voltagent/core": "workspace:*",
-    "@voltagent/sdk": "workspace:*"
+    "@voltagent/core": "^0.1.31",
+    "@voltagent/sdk": "^0.1.5"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",

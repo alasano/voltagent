@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@hono/zod-openapi": "^0.19.6",
-    "@voltagent/core": "workspace:*",
+    "@voltagent/core": "^0.1.31",
     "zod": "3.24.2",
     "zod-from-json-schema": "^0.4.1"
   },

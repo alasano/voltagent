@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@google/genai": "^0.10.0",
-    "@voltagent/core": "workspace:*",
+    "@voltagent/core": "^0.1.31",
     "zod": "3.24.2",
     "zod-to-json-schema": "^3.24.5"
   },

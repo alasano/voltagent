@@ -24,7 +24,7 @@
   "dependencies": {
     "@opentelemetry/core": "^2.0.0",
     "@opentelemetry/sdk-trace-base": "^2.0.0",
-    "@voltagent/core": "workspace:*",
+    "@voltagent/core": "^0.1.31",
     "langfuse": "^3.37.2"
   },
   "devDependencies": {
