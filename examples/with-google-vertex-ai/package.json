@@ -16,9 +16,9 @@
     "volt": "volt"
   },
   "dependencies": {
-    "@voltagent/cli": "^0.1.7",
-    "@voltagent/core": "^0.1.31",
-    "@voltagent/google-ai": "^0.3.12",
+    "@voltagent/cli": "workspace:*",
+    "@voltagent/core": "workspace:*",
+    "@voltagent/google-ai": "workspace:*",
     "zod": "3.24.2"
   },
   "devDependencies": {
