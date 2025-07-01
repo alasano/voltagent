@@ -1,23 +1,34 @@
-name: Release to npmjs.org
+name: Development Release to GitHub Packages
 
 on:
   push:
+    branches-ignore:
+      - main
+    paths:
+      - 'packages/**'
+      - '.github/workflows/release-github.yml'
+  pull_request:
     branches:
       - main
+    paths:
+      - 'packages/**'
 
 jobs:
-  publish:
+  publish-github:
     permissions:
       contents: write
       id-token: write
       issues: read
       pull-requests: write
+      packages: write
     runs-on: ubuntu-latest
     concurrency:
-      group: ${{ github.ref }}-stable-release
+      group: ${{ github.ref }}-github-packages-dev
       cancel-in-progress: true
     outputs:
       published: ${{ steps.changesets.outputs.published }}
+    # Only run on non-main branches or PRs
+    if: github.ref != 'refs/heads/main'
     steps:
       - uses: actions/checkout@v3
         with:
@@ -27,36 +38,30 @@ jobs:
         with:
           node-version: 20
           cache: "pnpm"
-      - name: Creating .npmrc
+      - name: Switch to GitHub Packages
         run: |
-          cat << EOF > "$HOME/.npmrc"
-            //registry.npmjs.org/:_authToken=$NPM_TOKEN
-          EOF
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          cp .npmrc.github .npmrc
+      - name: Update package configs for GitHub
+        run: node scripts/switch-registry.js update github
+      - name: Update workspace dependencies for GitHub
+        run: node scripts/update-workspace-deps.js update github
       - name: Install Dependencies
         run: pnpm install
       - name: Build
         run: pnpm build:all
-      ##- name: Lint
-      #  run: pnpm lint:ci
-     # - name: Syncpack
-     #   run: pnpm sp lint
       - name: Publint
         run: pnpm publint:all
       - name: Are The Types Wrong
         run: pnpm attw:all
-
       - name: Test
         run: pnpm test:all
-      - name: Create Release Pull Request or Publish to npmjs.org
+      - name: Create Release Pull Request or Publish to GitHub Packages
         id: changesets
         uses: changesets/action@v1
         with:
           version: pnpm version-packages
           publish: pnpm changeset publish
-          commit: "ci(changesets): version packages"
-          title: "ci(changesets): version packages"
+          commit: "ci(changesets): version packages for GitHub development"
+          title: "ci(changesets): version packages for GitHub development"
         env:
           GITHUB_TOKEN: ${{ secrets.VOLTAGENT_BOT }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
