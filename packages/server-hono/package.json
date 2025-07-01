@@ -1,6 +1,6 @@
 {
   "name": "@voltagent/server-hono",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Hono server implementation for VoltAgent",
   "license": "MIT",
   "exports": {
