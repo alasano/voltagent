@@ -1,6 +1,6 @@
 {
   "name": "@voltagent/postgres",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "VoltAgent PostgreSQL - PostgreSQL Memory provider integration for VoltAgent",
   "license": "MIT",
   "exports": {
