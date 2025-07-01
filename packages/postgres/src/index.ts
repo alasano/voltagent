@@ -117,11 +117,11 @@ export class PostgresStorage implements Memory {
       // Insert with all the indexed fields
       await client.query(
         `
-        INSERT INTO ${this.options.tablePrefix}_agent_history_timeline_events 
-        (id, history_id, agent_id, event_type, event_name, 
-         start_time, end_time, status, status_message, level, 
+        INSERT INTO ${this.options.tablePrefix}_agent_history_timeline_events
+        (id, history_id, agent_id, event_type, event_name,
+         start_time, end_time, status, status_message, level,
          version, parent_event_id, tags,
-         input, output, error, metadata) 
+         input, output, error, metadata)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
         ON CONFLICT (id) DO UPDATE SET
           history_id = $2,
@@ -359,7 +359,7 @@ export class PostgresStorage implements Memory {
       // Insert the message
       await client.query(
         `
-        INSERT INTO ${this.options.tablePrefix}_messages 
+        INSERT INTO ${this.options.tablePrefix}_messages
         (user_id, conversation_id, message_id, role, content, type, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         `,
@@ -722,8 +722,8 @@ export class PostgresStorage implements Memory {
       // Insert or replace with the structured format
       await client.query(
         `
-        INSERT INTO ${this.options.tablePrefix}_agent_history 
-        (id, agent_id, timestamp, status, input, output, usage, metadata) 
+        INSERT INTO ${this.options.tablePrefix}_agent_history
+        (id, agent_id, timestamp, status, input, output, usage, metadata)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT (id) DO UPDATE SET
           agent_id = $2,
@@ -812,7 +812,7 @@ export class PostgresStorage implements Memory {
       this.debug("Getting history entry for key:", key);
       const result = await client.query(
         `
-        SELECT id, agent_id, timestamp, status, input, output, usage, metadata 
+        SELECT id, agent_id, timestamp, status, input, output, usage, metadata
         FROM ${this.options.tablePrefix}_agent_history
         WHERE id = $1
         `,
@@ -846,8 +846,8 @@ export class PostgresStorage implements Memory {
       // Now also get related steps
       const stepsResult = await client.query(
         `
-        SELECT value 
-        FROM ${this.options.tablePrefix}_agent_history_steps 
+        SELECT value
+        FROM ${this.options.tablePrefix}_agent_history_steps
         WHERE history_id = $1 AND agent_id = $2
         ORDER BY (value->>'timestamp')::timestamp ASC
         `,
@@ -868,10 +868,10 @@ export class PostgresStorage implements Memory {
       // Get timeline events
       const timelineEventsResult = await client.query(
         `
-        SELECT id, event_type, event_name, start_time, end_time, 
-        status, status_message, level, version, 
-        parent_event_id, tags, input, output, error, metadata 
-        FROM ${this.options.tablePrefix}_agent_history_timeline_events 
+        SELECT id, event_type, event_name, start_time, end_time,
+        status, status_message, level, version,
+        parent_event_id, tags, input, output, error, metadata
+        FROM ${this.options.tablePrefix}_agent_history_timeline_events
         WHERE history_id = $1 AND agent_id = $2
         ORDER BY start_time ASC
         `,
@@ -956,7 +956,7 @@ export class PostgresStorage implements Memory {
     try {
       const result = await client.query(
         `
-        SELECT id, agent_id, timestamp, status, input, output, usage, metadata 
+        SELECT id, agent_id, timestamp, status, input, output, usage, metadata
         FROM ${this.options.tablePrefix}_agent_history
         WHERE agent_id = $1
         ORDER BY timestamp DESC
@@ -984,8 +984,8 @@ export class PostgresStorage implements Memory {
           // Get steps for this entry
           const stepsResult = await client.query(
             `
-            SELECT value 
-            FROM ${this.options.tablePrefix}_agent_history_steps 
+            SELECT value
+            FROM ${this.options.tablePrefix}_agent_history_steps
             WHERE history_id = $1 AND agent_id = $2
             ORDER BY (value->>'timestamp')::timestamp ASC
             `,
@@ -1006,10 +1006,10 @@ export class PostgresStorage implements Memory {
           // Get timeline events for this entry
           const timelineEventsResult = await client.query(
             `
-            SELECT id, event_type, event_name, start_time, end_time, 
-            status, status_message, level, version, 
-            parent_event_id, tags, input, output, error, metadata 
-            FROM ${this.options.tablePrefix}_agent_history_timeline_events 
+            SELECT id, event_type, event_name, start_time, end_time,
+            status, status_message, level, version,
+            parent_event_id, tags, input, output, error, metadata
+            FROM ${this.options.tablePrefix}_agent_history_timeline_events
             WHERE history_id = $1 AND agent_id = $2
             ORDER BY start_time ASC
             `,

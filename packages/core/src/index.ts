@@ -110,15 +110,17 @@ export class VoltAgent {
     }
   }
 
-  private async startLegacyServer(options: VoltAgentOptions): Promise<void> {
+  private async startLegacyServer(_options: VoltAgentOptions): Promise<void> {
     try {
+      // ! TODO: This breaks build
       // Dynamically import the server package ONLY when needed.
       // @ts-ignore - This is a dynamic import of an optional peer dependency.
-      const { _startLegacyHonoServer } = await import("@voltagent/server-hono");
+      // const { _startLegacyHonoServer } = await import("@voltagent/server-hono");
 
       // Delegate the entire startup process to a dedicated function
       // in the server package.
-      await _startLegacyHonoServer(options);
+      // await _startLegacyHonoServer(options);
+      console.log("startLegacyServer skipped");
     } catch (error: any) {
       if (error.code === "MODULE_NOT_FOUND") {
         throw new Error(

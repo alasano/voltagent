@@ -193,10 +193,10 @@ CREATE TABLE IF NOT EXISTS ${this.historyTable} (
 );
 
 -- Indexes for agent history
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_agent_history_id 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_agent_history_id
 ON ${this.historyTable}(id);
 
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_agent_history_agent_id 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_agent_history_agent_id
 ON ${this.historyTable}(agent_id);
 
 -- Agent History Steps Table
@@ -239,22 +239,22 @@ CREATE TABLE IF NOT EXISTS ${this.timelineEventsTable} (
 );
 
 -- Indexes for timeline events
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_history_id 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_history_id
 ON ${this.timelineEventsTable}(history_id);
 
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_agent_id 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_agent_id
 ON ${this.timelineEventsTable}(agent_id);
 
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_event_type 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_event_type
 ON ${this.timelineEventsTable}(event_type);
 
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_event_name 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_event_name
 ON ${this.timelineEventsTable}(event_name);
 
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_parent_event_id 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_parent_event_id
 ON ${this.timelineEventsTable}(parent_event_id);
 
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_status 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_status
 ON ${this.timelineEventsTable}(status);`);
 
         console.log(`\n${"=".repeat(100)}`);
@@ -310,7 +310,7 @@ ON ${this.timelineEventsTable}(status);`);
 
         if (needsHistoryUpdate) {
           console.log("-- 2. Update agent history table structure");
-          console.log(`ALTER TABLE ${this.historyTable} 
+          console.log(`ALTER TABLE ${this.historyTable}
 ADD COLUMN IF NOT EXISTS id TEXT,
 ADD COLUMN IF NOT EXISTS timestamp TEXT,
 ADD COLUMN IF NOT EXISTS status TEXT,
@@ -322,31 +322,31 @@ ADD COLUMN IF NOT EXISTS metadata JSONB;\n`);
 
         console.log("-- 3. Create performance indexes");
         if (needsTimelineTable) {
-          console.log(`CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_history_id 
+          console.log(`CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_history_id
 ON ${this.timelineEventsTable}(history_id);
 
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_agent_id 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_agent_id
 ON ${this.timelineEventsTable}(agent_id);
 
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_event_type 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_event_type
 ON ${this.timelineEventsTable}(event_type);
 
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_event_name 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_event_name
 ON ${this.timelineEventsTable}(event_name);
 
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_parent_event_id 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_parent_event_id
 ON ${this.timelineEventsTable}(parent_event_id);
 
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_status 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_timeline_events_status
 ON ${this.timelineEventsTable}(status);`);
         }
 
         if (needsHistoryUpdate) {
           console.log(`
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_agent_history_id 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_agent_history_id
 ON ${this.historyTable}(id);
 
-CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_agent_history_agent_id 
+CREATE INDEX IF NOT EXISTS idx_${this.baseTableName}_agent_history_agent_id
 ON ${this.historyTable}(agent_id);`);
         }
 

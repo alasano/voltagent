@@ -2,6 +2,10 @@
   "name": "@voltagent/core",
   "version": "0.1.30",
   "description": "VoltAgent Core - AI agent framework for JavaScript",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/veloso/alasano.git"
+  },
   "license": "MIT",
   "exports": {
     ".": {
@@ -45,5 +49,8 @@
   },
   "peerDependencies": {
     "zod": "3.24.2"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
   }
 }

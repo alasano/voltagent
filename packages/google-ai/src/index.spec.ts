@@ -1,15 +1,19 @@
-import { FinishReason, type GenerateContentResponse, type GoogleGenAIOptions } from "@google/genai";
+import type { GenerateContentResponse, GoogleGenAIOptions } from "@google/genai";
 import { z } from "zod";
 import { GoogleGenAIProvider } from "./index";
 
-const mockGenerateContent = jest.fn();
+const mockGenerateContent = vi.fn();
 
-// Mock the GoogleGenAI class and its methods
-jest.mock("@google/genai", () => {
-  const originalModule = jest.requireActual("@google/genai");
+vi.mock("@google/genai", async () => {
+  const originalModule = await vi.importActual("@google/genai");
   return {
     ...originalModule,
-    GoogleGenAI: jest.fn().mockImplementation(() => {
+    FunctionCallingConfigMode: {
+      AUTO: "auto",
+      ANY: "any",
+      NONE: "none",
+    },
+    GoogleGenAI: vi.fn().mockImplementation(() => {
       return {
         models: {
           generateContent: mockGenerateContent,
@@ -19,11 +23,12 @@ jest.mock("@google/genai", () => {
   };
 });
 
-describe("GoogleGenAIProvider", () => {
+describe("GoogleGenAIProvider", async () => {
   let provider: GoogleGenAIProvider;
+  const { FinishReason } = await import("@google/genai");
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     const options: GoogleGenAIOptions = {
       apiKey: "test-api-key",
@@ -36,7 +41,9 @@ describe("GoogleGenAIProvider", () => {
     it("should generate text successfully", async () => {
       // Mock the response from the Google GenAI API
       const mockResponse: Partial<GenerateContentResponse> = {
-        text: "Hello, I am a test response!",
+        get text() {
+          return "Hello, I am a test response!";
+        },
         responseId: "test-response-id",
         candidates: [{ finishReason: FinishReason.STOP }],
         usageMetadata: {
@@ -60,7 +67,7 @@ describe("GoogleGenAIProvider", () => {
         completionTokens: 20,
         totalTokens: 30,
       });
-      expect(result.finishReason).toBe("STOP");
+      expect(result.finishReason).toBe(FinishReason.STOP);
 
       // Verify the correct parameters were passed to generateContent
       expect(mockGenerateContent).toHaveBeenCalledWith({
@@ -76,7 +83,9 @@ describe("GoogleGenAIProvider", () => {
 
     it("should handle message with onStepFinish callback", async () => {
       const mockResponse: Partial<GenerateContentResponse> = {
-        text: "Hello, I am a test response!",
+        get text() {
+          return "Hello, I am a test response!";
+        },
         responseId: "test-response-id",
         candidates: [{ finishReason: FinishReason.STOP }],
         usageMetadata: {
@@ -88,7 +97,7 @@ describe("GoogleGenAIProvider", () => {
 
       mockGenerateContent.mockResolvedValueOnce(mockResponse);
 
-      const onStepFinishMock = jest.fn();
+      const onStepFinishMock = vi.fn();
 
       await provider.generateText({
         messages: [{ role: "user", content: "Hello!" }],
@@ -112,7 +121,9 @@ describe("GoogleGenAIProvider", () => {
 
     it("should handle provider options correctly", async () => {
       const mockResponse: Partial<GenerateContentResponse> = {
-        text: "Test response with provider options",
+        get text() {
+          return "Test response with provider options";
+        },
         responseId: "test-response-id",
         candidates: [{ finishReason: FinishReason.STOP }],
       };
@@ -156,15 +167,29 @@ describe("GoogleGenAIProvider", () => {
   describe("streamText", () => {
     it("should stream text successfully", async () => {
       async function* mockGenerator() {
-        yield { text: "Hello", responseId: "chunk1" };
-        yield { text: ", ", responseId: "chunk2" };
         yield {
-          text: "world!",
-          responseId: "chunk3",
-          candidates: [{ finishReason: "STOP" }],
+          get text() {
+            return "Hello";
+          },
+          responseId: "chunk1",
         };
         yield {
-          text: "",
+          get text() {
+            return ", ";
+          },
+          responseId: "chunk2",
+        };
+        yield {
+          get text() {
+            return "world!";
+          },
+          responseId: "chunk3",
+          candidates: [{ finishReason: FinishReason.STOP }],
+        };
+        yield {
+          get text() {
+            return "";
+          },
           responseId: "final",
           usageMetadata: {
             promptTokenCount: 5,
@@ -174,13 +199,13 @@ describe("GoogleGenAIProvider", () => {
         };
       }
 
-      const mockGenerateContentStream = jest.fn().mockResolvedValue(mockGenerator());
+      const mockGenerateContentStream = vi.fn().mockResolvedValue(mockGenerator());
 
       const provider = new GoogleGenAIProvider({ apiKey: "test-api-key" });
       (provider as any).ai.models.generateContentStream = mockGenerateContentStream;
 
-      const onChunkMock = jest.fn();
-      const onStepFinishMock = jest.fn();
+      const onChunkMock = vi.fn();
+      const onStepFinishMock = vi.fn();
 
       const result = await provider.streamText({
         messages: [{ role: "user", content: "Hello!" }],
@@ -223,6 +248,133 @@ describe("GoogleGenAIProvider", () => {
     });
   });
 
+  describe("tool handling", () => {
+    it("should include toolName in tool-result steps", async () => {
+      const onStepFinishMock = vi.fn();
+
+      // Mock response with function calls
+      const mockResponseWithFunctionCall: Partial<GenerateContentResponse> = {
+        functionCalls: [
+          {
+            id: "test-call-id",
+            name: "test_tool",
+            args: { param: "value" },
+          },
+        ],
+        responseId: "func-call-response",
+        candidates: [{ finishReason: FinishReason.STOP }],
+      };
+
+      // Mock final response after function execution
+      const mockFinalResponse: Partial<GenerateContentResponse> = {
+        get text() {
+          return "Tool execution completed";
+        },
+        responseId: "final-response",
+        candidates: [{ finishReason: FinishReason.STOP }],
+        usageMetadata: {
+          promptTokenCount: 10,
+          candidatesTokenCount: 20,
+          totalTokenCount: 30,
+        },
+      };
+
+      // Mock function execution
+      const mockTool = {
+        id: "test_tool",
+        name: "test_tool",
+        description: "A test tool",
+        parameters: z.object({
+          param: z.string().optional(),
+        }),
+        execute: vi.fn().mockResolvedValue("tool result"),
+      };
+
+      mockGenerateContent
+        .mockResolvedValueOnce(mockResponseWithFunctionCall)
+        .mockResolvedValueOnce(mockFinalResponse);
+
+      await provider.generateText({
+        messages: [{ role: "user", content: "Use the test tool" }],
+        model: "gemini-2.0-flash-001",
+        tools: [mockTool],
+        onStepFinish: onStepFinishMock,
+      });
+
+      // Check that onStepFinish was called for both tool call and tool result
+      expect(onStepFinishMock).toHaveBeenCalledTimes(3); // tool_call + tool_result + final text
+
+      // Check tool_call step
+      const toolCallStep = onStepFinishMock.mock.calls[0][0];
+      expect(toolCallStep.type).toBe("tool_call");
+      expect(toolCallStep.name).toBe("test_tool");
+      expect(JSON.parse(toolCallStep.content)[0].toolName).toBe("test_tool");
+
+      // Check tool_result step
+      const toolResultStep = onStepFinishMock.mock.calls[1][0];
+      expect(toolResultStep.type).toBe("tool_result");
+      expect(toolResultStep.name).toBe("test_tool");
+      expect(JSON.parse(toolResultStep.content)[0].toolName).toBe("test_tool");
+    });
+
+    it("should create proper step content format for tool calls and results", async () => {
+      // Test the _createStepFromChunk method indirectly through tool execution
+      const chunk = {
+        type: "tool-call",
+        toolCallId: "test-call-123",
+        toolName: "calculator",
+        args: { operation: "add", a: 1, b: 2 },
+      };
+
+      const step = (provider as any)._createStepFromChunk(chunk);
+
+      expect(step).toEqual({
+        id: "test-call-123",
+        type: "tool_call",
+        name: "calculator",
+        arguments: { operation: "add", a: 1, b: 2 },
+        content: JSON.stringify([
+          {
+            type: "tool-call",
+            toolCallId: "test-call-123",
+            toolName: "calculator",
+            args: { operation: "add", a: 1, b: 2 },
+          },
+        ]),
+        role: "assistant",
+        usage: undefined,
+      });
+    });
+
+    it("should create proper step content format for tool results", async () => {
+      const resultChunk = {
+        type: "tool_result",
+        toolCallId: "test-call-123",
+        toolName: "calculator",
+        result: { answer: 3 },
+      };
+
+      const step = (provider as any)._createStepFromChunk(resultChunk);
+
+      expect(step).toEqual({
+        id: "test-call-123",
+        type: "tool_result",
+        name: "calculator",
+        result: { answer: 3 },
+        content: JSON.stringify([
+          {
+            type: "tool-result",
+            toolCallId: "test-call-123",
+            toolName: "calculator",
+            result: { answer: 3 },
+          },
+        ]),
+        role: "assistant",
+        usage: undefined,
+      });
+    });
+  });
+
   describe("generateObject", () => {
     it("should generate an object successfully", async () => {
       const testSchema = z.object({
@@ -231,7 +383,9 @@ describe("GoogleGenAIProvider", () => {
       });
 
       const mockResponse: Partial<GenerateContentResponse> = {
-        text: JSON.stringify({ name: "Test User", age: 30 }),
+        get text() {
+          return JSON.stringify({ name: "Test User", age: 30 });
+        },
         responseId: "obj-response-id",
         candidates: [{ finishReason: FinishReason.STOP }],
         usageMetadata: {
@@ -256,7 +410,7 @@ describe("GoogleGenAIProvider", () => {
         completionTokens: 25,
         totalTokens: 40,
       });
-      expect(result.finishReason).toBe("STOP");
+      expect(result.finishReason).toBe(FinishReason.STOP);
 
       // Verify the correct parameters were passed to generateContent
       expect(mockGenerateContent).toHaveBeenCalledWith(
@@ -281,7 +435,9 @@ describe("GoogleGenAIProvider", () => {
       const testSchema = z.object({ status: z.string() });
       const mockResponseJson = { status: "completed" };
       const mockResponse: Partial<GenerateContentResponse> = {
-        text: JSON.stringify(mockResponseJson),
+        get text() {
+          return JSON.stringify(mockResponseJson);
+        },
         responseId: "obj-step-id",
         candidates: [{ finishReason: FinishReason.STOP }],
         usageMetadata: {
@@ -293,7 +449,7 @@ describe("GoogleGenAIProvider", () => {
 
       mockGenerateContent.mockResolvedValueOnce(mockResponse);
 
-      const onStepFinishMock = jest.fn();
+      const onStepFinishMock = vi.fn();
 
       await provider.generateObject({
         messages: [{ role: "user", content: "Get status" }],
@@ -319,7 +475,9 @@ describe("GoogleGenAIProvider", () => {
     it("should throw error for invalid JSON response", async () => {
       const testSchema = z.object({ data: z.string() });
       const mockResponse: Partial<GenerateContentResponse> = {
-        text: "{ invalid json ", // Malformed JSON
+        get text() {
+          return "{ invalid json ";
+        }, // Malformed JSON
         responseId: "invalid-json-id",
         candidates: [{ finishReason: FinishReason.STOP }],
       };
@@ -338,7 +496,9 @@ describe("GoogleGenAIProvider", () => {
     it("should throw error if response does not match schema", async () => {
       const testSchema = z.object({ name: z.string(), age: z.number() }); // Expects age as number
       const mockResponse: Partial<GenerateContentResponse> = {
-        text: JSON.stringify({ name: "Test User", age: "thirty" }), // Age is string, not number
+        get text() {
+          return JSON.stringify({ name: "Test User", age: "thirty" });
+        }, // Age is string, not number
         responseId: "schema-mismatch-id",
         candidates: [{ finishReason: FinishReason.STOP }],
       };
