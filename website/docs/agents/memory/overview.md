@@ -58,7 +58,7 @@ When memory is disabled, the agent won't store or retrieve any conversation hist
 
 ## Separate Conversation and History Memory
 
-_Available as of version `0.1.55`_
+_Available as of version `0.1.56`_
 
 VoltAgent uses two types of memory internally:
 
