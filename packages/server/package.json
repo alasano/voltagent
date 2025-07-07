@@ -1,7 +1,7 @@
 {
-  "name": "@voltagent/server-hono",
+  "name": "@voltagent/server",
   "version": "0.1.0",
-  "description": "Hono server implementation for VoltAgent",
+  "description": "Server implementation for VoltAgent",
   "license": "MIT",
   "exports": {
     ".": {
@@ -13,9 +13,7 @@
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

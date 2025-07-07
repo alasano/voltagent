@@ -54,7 +54,7 @@ const globalCustomEndpoints: LegacyCustomEndpointDefinition[] = [];
 
 /**
  * Register custom endpoints globally (for legacy VoltAgent compatibility)
- * @deprecated Use customEndpoints option in createVoltServer from @voltagent/server-hono instead
+ * @deprecated Use customEndpoints option in createVoltServer from @voltagent/server instead
  * @param endpoints Array of custom endpoint definitions
  */
 export function registerCustomEndpoints(endpoints: LegacyCustomEndpointDefinition[]): void {
@@ -79,7 +79,7 @@ type VoltAgentOptions = {
 };
 
 /**
- * @deprecated The VoltAgent class is deprecated and will be removed in v2.0. Please use the new `createVoltServer` function from `@voltagent/server-hono` or your chosen server adapter.
+ * @deprecated The VoltAgent class is deprecated and will be removed in v2.0. Please use the new `createVoltServer` function from `@voltagent/server` or your chosen server adapter.
  */
 export class VoltAgent {
   private serverMode: "auto" | "manual" | "disabled";
@@ -101,7 +101,7 @@ export class VoltAgent {
 
     if (this.serverMode === "auto" && options.autoStart !== false) {
       devLogger.warn(
-        "[DEPRECATION] Automatic server startup via 'new VoltAgent()' is deprecated and will be removed in v2.0. Please migrate to the new 'createVoltServer' API from '@voltagent/server-hono'.",
+        "[DEPRECATION] Automatic server startup via 'new VoltAgent()' is deprecated and will be removed in v2.0. Please migrate to the new 'createVoltServer' API from '@voltagent/server'.",
       );
 
       this.startLegacyServer(options).catch((err) => {
@@ -114,7 +114,7 @@ export class VoltAgent {
     try {
       // Dynamically import the server package ONLY when needed.
       // @ts-ignore - This is a dynamic import of an optional peer dependency.
-      const { _startLegacyHonoServer } = await import("@voltagent/server-hono");
+      const { _startLegacyHonoServer } = await import("@voltagent/server");
 
       // Delegate the entire startup process to a dedicated function
       // in the server package.
@@ -122,7 +122,7 @@ export class VoltAgent {
     } catch (error: any) {
       if (error.code === "MODULE_NOT_FOUND") {
         throw new Error(
-          "To use the automatic server, you must install the default Hono server: 'npm install @voltagent/server-hono'",
+          "To use the automatic server, you must install the default server: 'npm install @voltagent/server'",
         );
       }
       throw error;

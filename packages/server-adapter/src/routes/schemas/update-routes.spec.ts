@@ -225,7 +225,7 @@ describe("Update Routes", () => {
       const packageNames = [
         "@voltagent/core",
         "@voltagent/server-adapter",
-        "@voltagent/server-hono",
+        "@voltagent/server",
         "some-other-package",
       ];
 

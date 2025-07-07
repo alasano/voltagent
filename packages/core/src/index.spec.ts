@@ -11,12 +11,12 @@ jest.mock("./utils/internal/dev-logger", () => ({
   },
 }));
 
-// Mock the dynamic import for server-hono module
+// Mock the dynamic import for server module
 const mockStartLegacyHonoServer = jest.fn().mockResolvedValue(undefined);
 
 // Mock the dynamic import() call
 (global as any).import = jest.fn().mockImplementation((moduleName: string) => {
-  if (moduleName === "@voltagent/server-hono") {
+  if (moduleName === "@voltagent/server") {
     return Promise.resolve({
       _startLegacyHonoServer: mockStartLegacyHonoServer,
     });
