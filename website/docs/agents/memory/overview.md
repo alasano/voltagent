@@ -56,6 +56,57 @@ const agent = new Agent({
 
 When memory is disabled, the agent won't store or retrieve any conversation history, making it stateless for each interaction.
 
+## Separate Conversation and History Memory
+
+_Available as of version `0.1.55`_
+
+VoltAgent uses two types of memory internally:
+
+- **Conversation Memory**: Stores chat messages for conversation continuity (configured via the `memory` option)
+- **History Memory**: Stores execution telemetry, timeline events, and debugging information (configured via the `historyMemory` option)
+
+You can configure them separately, which can be useful for environments with filesystem restrictions.
+
+```ts
+import { Agent, InMemoryStorage } from "@voltagent/core";
+import { VercelAIProvider } from "@voltagent/vercel-ai";
+import { openai } from "@ai-sdk/openai";
+
+// Create shared in-memory storage for serverless environments
+const inMemoryStorage = new InMemoryStorage({
+  storageLimit: 100,
+});
+
+const agent = new Agent({
+  name: "Serverless Assistant",
+  instructions: "Assistant that works in read-only environments",
+  llm: new VercelAIProvider(),
+  model: openai("gpt-4o"),
+  memory: inMemoryStorage, // For conversation history
+  historyMemory: inMemoryStorage, // For execution telemetry
+});
+```
+
+**When to use separate memory configurations:**
+
+- **Serverless/Read-only environments**: Use `InMemoryStorage` for both when filesystem access is restricted
+- **Different storage requirements**: Use `InMemoryStorage` for conversation memory and `LibSQLStorage` for persistent history
+- **Compliance**: Separate user data (conversations) from system data (execution logs) for regulatory requirements
+
+```ts
+// Example: In-memory for conversations, persistent for history
+import { InMemoryStorage, LibSQLStorage } from "@voltagent/core";
+
+const agent = new Agent({
+  name: "Hybrid Memory Assistant",
+  // ... other config ...
+  memory: new InMemoryStorage({ storageLimit: 50 }), // Fast access for conversations
+  historyMemory: new LibSQLStorage({ url: "file:history.db" }), // Persistent execution logs
+});
+```
+
+**Important**: If you don't specify `historyMemory`, it defaults to `LibSQLStorage` regardless of your `memory` configuration.
+
 ## Memory Providers
 
 VoltAgent achieves memory persistence through swappable **Memory Providers**. These are classes that implement the `Memory` interface defined in `@voltagent/core`. They handle the actual storage and retrieval logic, allowing you to choose the backend that best suits your needs.
