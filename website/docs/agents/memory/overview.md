@@ -65,25 +65,21 @@ VoltAgent uses two types of memory internally:
 - **Conversation Memory**: Stores chat messages for conversation continuity (configured via the `memory` option)
 - **History Memory**: Stores execution telemetry, timeline events, and debugging information (configured via the `historyMemory` option)
 
-You can configure them separately, which can be useful for environments with filesystem restrictions.
+By default, history memory uses the same storage instance as conversation memory. This means if you configure `InMemoryStorage` for conversations, history will also use `InMemoryStorage` automatically:
 
 ```ts
 import { Agent, InMemoryStorage } from "@voltagent/core";
 import { VercelAIProvider } from "@voltagent/vercel-ai";
 import { openai } from "@ai-sdk/openai";
 
-// Create shared in-memory storage for serverless environments
-const inMemoryStorage = new InMemoryStorage({
-  storageLimit: 100,
-});
-
+// Default behavior: history automatically uses same storage as conversation
 const agent = new Agent({
   name: "Serverless Assistant",
   instructions: "Assistant that works in read-only environments",
   llm: new VercelAIProvider(),
   model: openai("gpt-4o"),
-  memory: inMemoryStorage, // For conversation history
-  historyMemory: inMemoryStorage, // For execution telemetry
+  memory: new InMemoryStorage({ storageLimit: 100 }), // Both conversation and history use this
+  // historyMemory not specified - automatically uses same as memory
 });
 ```
 
@@ -105,7 +101,7 @@ const agent = new Agent({
 });
 ```
 
-**Important**: If you don't specify `historyMemory`, it defaults to `LibSQLStorage` regardless of your `memory` configuration.
+**Default behavior**: If you don't specify `historyMemory`, it uses the same storage instance as `memory`. If conversation memory is disabled (`memory: false`), history memory defaults to `LibSQLStorage`.
 
 ## Memory Providers
 
